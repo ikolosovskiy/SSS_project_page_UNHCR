@@ -91,10 +91,28 @@ body:has(>.sss-project){margin:0}
 .sss-project .partner-arrow{grid-column:2;grid-row:1/span 2;align-self:center}
 .sss-project .project-partner a:hover b{text-decoration:underline;text-underline-offset:4px}
 .sss-project .section-nav-shell{position:relative;background:var(--cream);border-block:1px solid var(--line)}
-.sss-project .section-nav{display:flex;gap:32px;overflow-x:auto;scrollbar-width:thin}
-.sss-project .section-nav a{flex:none;position:relative;display:flex;align-items:center;gap:6px;padding:22px 0;font-size:16px;line-height:1.5;color:var(--muted)}
-.sss-project .section-nav a[aria-current],.sss-project .section-nav a:hover{color:var(--forest)}
-.sss-project .section-nav a[aria-current]:after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--forest)}
+.sss-project .section-index{padding-block:32px}
+.sss-project .section-index-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
+.sss-project .section-index-heading p{font:700 18px/1.5 var(--font-heading)}
+.sss-project .section-index-toggle{display:none}
+.sss-project .section-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 16px;counter-reset:section-index}
+.sss-project .section-nav a{counter-increment:section-index;display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--forest);border-radius:8px;font-size:18px;line-height:1.5;transition:background .2s,color .2s}
+.sss-project .section-nav a:before{content:counter(section-index);flex:none;font-size:14px;min-width:18px}
+.sss-project .section-nav a[aria-current]{background:var(--forest);color:var(--cream)}
+.sss-project .section-nav a:hover{background:var(--yellow);color:var(--forest)}
+@media(max-width:1100px){.sss-project .section-nav{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){
+.sss-project .section-index{padding-block:20px}
+.sss-project .section-index-heading{flex-wrap:wrap;margin-bottom:16px}
+.sss-project .section-nav{grid-template-columns:1fr;gap:8px}
+.sss-project .section-nav a{padding:14px;font-size:18px}
+.sss-project.has-section-index .section-index-toggle{display:flex;align-items:center;justify-content:space-between;gap:24px;width:100%;padding:14px 16px;border:1px solid var(--forest);border-radius:8px;background:var(--forest);color:var(--cream);font-size:18px;text-align:left}
+.sss-project .section-index-toggle span{font-size:24px;line-height:1;transition:transform .25s}
+.sss-project .section-index-toggle[aria-expanded="true"] span{transform:rotate(45deg)}
+.sss-project.has-section-index:not(.section-index-open) .section-nav{display:none}
+.sss-project.has-section-index:not(.section-index-open) .section-index-heading{margin-bottom:0}
+}
+
 .sss-project .reading-progress{position:absolute;bottom:-1px;left:0;width:100%;height:2px;background:var(--yellow);transform:scaleX(0);transform-origin:left}
 /* One reading column instead of competing columns of small copy. */
 .sss-project .about .section-heading{max-width:1150px}

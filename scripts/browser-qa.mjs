@@ -26,6 +26,13 @@ for(const width of [1440,1024,768,390,320]){
 }
 await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
 await cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+const indexClosed=await evaluate(`getComputedStyle(document.querySelector('.section-nav')).display==='none'`);
+await evaluate(`document.querySelector('.section-index-toggle').click();document.querySelector('.section-nav-shell').scrollIntoView()`);
+const indexExpanded=await evaluate(`document.querySelector('.section-index-toggle').getAttribute('aria-expanded')==='true'&&[...document.querySelectorAll('.section-nav a')].every(a=>a.getBoundingClientRect().width>0)&&document.querySelector('.section-nav').scrollWidth===document.querySelector('.section-nav').clientWidth`);
+const indexShot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync('qa/mobile-section-index.png',Buffer.from(indexShot.data,'base64'));
+await evaluate(`document.querySelector('.section-nav a').click()`);
+assert(indexClosed&&indexExpanded&&await evaluate(`location.hash==='#about'&&document.querySelector('.section-index-toggle').getAttribute('aria-expanded')==='false'`),'Mobile section index expands without scrolling and closes after navigation');
+report.push({indexClosed,indexExpanded});
 await evaluate(`document.querySelector('#results').scrollIntoView()`);
 await new Promise(r=>setTimeout(r,180));
 const counterStarted=await evaluate(`!!document.querySelector('.results-grid .counter-value')&&document.querySelector('.results-grid .counter-value').textContent!=='2 376'`);
@@ -99,7 +106,7 @@ await evaluate(`document.querySelector('.menu-close').click()`);
 await new Promise(r=>setTimeout(r,100));
 await evaluate(`document.querySelector('#ombudsman').scrollIntoView()`);
 const kpiShot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync('qa/kpi-readability.png',Buffer.from(kpiShot.data,'base64'));
-for(const [name,selector] of [['about','#about'],['portal','.portal-band'],['footer','.site-footer'],['news','#project-news'],['photo','.photo-moment'],['disclosure','#councils .story-details']]){
+for(const [name,selector] of [['section-index','.section-nav-shell'],['about','#about'],['portal','.portal-band'],['footer','.site-footer'],['news','#project-news'],['photo','.photo-moment'],['disclosure','#councils .story-details']]){
 await evaluate(`document.querySelector('${selector}').scrollIntoView()`);
 const capture=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync(`qa/${name}.png`,Buffer.from(capture.data,'base64'));
 }

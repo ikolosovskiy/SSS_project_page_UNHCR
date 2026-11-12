@@ -85,6 +85,20 @@
       closeMenu(); menu.focus();
     }
   });
+  const indexToggle = root.querySelector('.section-index-toggle');
+  const closeSectionIndex = () => {
+    root.classList.remove('section-index-open');
+    indexToggle.setAttribute('aria-expanded', 'false');
+  };
+  root.classList.add('has-section-index');
+  indexToggle.hidden = false;
+  indexToggle.addEventListener('click', () => {
+    const open = root.classList.toggle('section-index-open');
+    indexToggle.setAttribute('aria-expanded', String(open));
+  });
+  indexToggle.parentElement.parentElement.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { closeSectionIndex(); indexToggle.focus(); }
+  });
   root.addEventListener('click', event => {
     const link = event.target.closest('a[href^="#"]');
     if (!link) return;
@@ -92,6 +106,7 @@
     if (!target) return;
     event.preventDefault();
     closeMenu();
+    if (link.closest('.section-nav')) closeSectionIndex();
     if (target instanceof HTMLDetailsElement) target.open = true;
     target.scrollIntoView({ behavior: motion.matches || event.detail === 0 ? 'instant' : 'smooth', block: 'start' });
     history.replaceState(null, '', link.hash);
@@ -117,7 +132,7 @@
   const progress = root.querySelector('.reading-progress');
   let scheduled = false;
   function updateScroll() {
-    const offset = root.querySelector('.section-nav-shell').getBoundingClientRect().height + 140;
+    const offset = 140;
     let active = 0;
     sections.forEach((section, i) => { if (section.getBoundingClientRect().top <= offset) active = i; });
     navLinks.forEach((link, i) => { if (i === active) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current'); });
