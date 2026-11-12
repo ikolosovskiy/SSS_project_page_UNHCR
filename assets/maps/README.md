@@ -1,13 +1,15 @@
-# Межі областей України
+# Альтернативна мапа України · 1.6.0
 
-ukraine-regions.json — спрощені й спроєктовані межі 27 адміністративних одиниць (24 області, АР Крим, міста Київ та Севастополь). Дані отримано через geoBoundaries gbOpen, boundaryID UKR-ADM1-14850775; джерело: OpenStreetMap / Wambacher. Рік представлених меж: 2017.
+Картографічна основа: Natural Earth 1:10m Admin 1. Дані — public domain, обов’язкова атрибуція відсутня.
 
-Джерело та метадані: https://www.geoboundaries.org/api/current/gbOpen/UKR/ADM1/
+Джерело: https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-1-states-provinces/
+Умови: https://www.naturalearthdata.com/about/terms-of-use/
+Завантаження: https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson
 
-© OpenStreetMap contributors. Географічні дані та їхня похідна база поширюються на умовах ODbL 1.0: https://opendatacommons.org/licenses/odbl/1-0/ . Атрибуція OSM: https://www.openstreetmap.org/copyright . Ці умови стосуються геоданих, а не всього програмного коду сайту.
+ukraine-regions.json — спроєктовані контури 24 областей, усього Криму та міста Києва. Українські одиниці обрано за кодами UA, включно з Кримом; атрибути контролю території з джерела не використовуються. Севастополь геометрично об’єднано з Кримом: спільну межу вилучено, берегову лінію зшито в один контур без внутрішнього отвору.
 
-Збережені контури та координати підписів дозволяють звичайну збірку без мережевих запитів. scripts/geography.mjs створює SVG і вставляє його в HTML. Виділення 23 областей визначається переліком regionNames у scripts/build.mjs; м. Київ має окремий маркер і не додається до кількості областей.
+23 області роботи визначає regionNames у scripts/build.mjs. Київ має окремий маркер. Назви — лише при взаємодії, без постійних підписів. Палітра — тональні варіанти погодженого Лісу, кремові межі, темний стан наведення. Під мапою немає легенди, інструкцій чи credit-блоку.
 
-Для повторної підготовки контурів завантажте URL download із метаданих ukraine-regions.json до .cache/ukraine-adm1.geojson, запустіть node scripts/prepare-map.mjs, потім node scripts/build.mjs. Повторна підготовка не потрібна для звичайної збірки сторінки.
+Звичайна збірка: node scripts/build.mjs. Працює без мережі та залежностей.
 
-Актуальне відображення: підписи не малюються на мапі. Повні назви збережено в aria-label, data-region-name і SVG title; картку при взаємодії забезпечує main.js. Спрощення контурів: 0.18 px, координати: 2 знаки після коми. Київський маркер збережено.
+Повторна підготовка: збережіть GeoJSON за URL завантаження в .cache/natural-earth-admin1.geojson, відберіть features з iso_3166_2, що починаються на UA-, у .cache/natural-earth-ukraine.geojson; запустіть node scripts/prepare-map.mjs і node scripts/build.mjs. Модуль dissolve у prepare-map об’єднує лише Крим і Севастополь за спільними ребрами Natural Earth. Старі дані geoBoundaries/OSM більше не використовуються в мапі.

@@ -1,8 +1,30 @@
 import {readFileSync,writeFileSync} from 'node:fs';
-const source=JSON.parse(readFileSync('.cache/ukraine-adm1.geojson','utf8'));
-const names={ 'Kherson Oblast':['Херсонська',33.8,46.6], 'Volyn Oblast':['Волинська',24.8,51.2], 'Rivne Oblast':['Рівненська',26.6,51.1], 'Zhytomyr Oblast':['Житомирська',28.5,50.7], 'Kyiv Oblast':['Київська',30.35,49.95], 'Chernihiv Oblast':['Чернігівська',32.1,51.3], 'Sumy Oblast':['Сумська',34.3,50.85], 'Kharkiv Oblast':['Харківська',36.5,49.65], 'Luhansk Oblast':['Луганська',39,49], 'Donetsk Oblast':['Донецька',37.65,48.05], 'Zaporizhia Oblast':['Запорізька',35.8,47.35], 'Lviv Oblast':['Львівська',23.9,49.8], 'Ivano-Frankivsk Oblast':['Івано-Франківська',24.6,48.7], 'Zakarpattia Oblast':['Закарпатська',23.25,48.15], 'Ternopil Oblast':['Тернопільська',25.6,49.45], 'Chernivtsi Oblast':['Чернівецька',26.05,48.05], 'Odessa Oblast':['Одеська',29.75,47.15], 'Mykolaiv Oblast':['Миколаївська',31.6,47.15], 'Autonomous Republic of Crimea':['АР Крим',34.4,45.35], 'Vinnytsia Oblast':['Вінницька',28.6,48.95], 'Khmelnytskyi Oblast':['Хмельницька',26.9,49.55], 'Cherkasy Oblast':['Черкаська',31.8,49.25], 'Poltava Oblast':['Полтавська',33.8,49.8], 'Dnipropetrovsk Oblast':['Дніпропетровська',34.9,48.55], 'Kirovohrad Oblast':['Кіровоградська',32.1,48.4], 'Kyiv':['м. Київ',30.523,50.45], 'Sevastopol':['м. Севастополь',33.525,44.58]};
+const source=JSON.parse(readFileSync('.cache/natural-earth-ukraine.geojson','utf8'));
+const names={'UA-74':'Чернігівська','UA-07':'Волинська','UA-56':'Рівненська','UA-18':'Житомирська','UA-32':'Київська','UA-21':'Закарпатська','UA-77':'Чернівецька','UA-26':'Івано-Франківська','UA-51':'Одеська','UA-05':'Вінницька','UA-46':'Львівська','UA-59':'Сумська','UA-63':'Харківська','UA-09':'Луганська','UA-14':'Донецька','UA-43':'АР Крим','UA-65':'Херсонська','UA-23':'Запорізька','UA-48':'Миколаївська','UA-53':'Полтавська','UA-68':'Хмельницька','UA-61':'Тернопільська','UA-12':'Дніпропетровська','UA-71':'Черкаська','UA-35':'Кіровоградська','UA-30':'м. Київ'};
 const project=([lon,lat])=>[+(34+(lon-22)*62).toFixed(2),+(35+(52.4-lat)*94).toFixed(2)];
-function simplify(points,tolerance=.18){if(points.length<4)return points;const keep=new Set([0,points.length-1]);const stack=[[0,points.length-1]];while(stack.length){const [a,b]=stack.pop();let max=tolerance*tolerance,index=-1;const [x,y]=points[a],dx=points[b][0]-x,dy=points[b][1]-y;for(let i=a+1;i<b;i++){const p=points[i];const t=Math.max(0,Math.min(1,((p[0]-x)*dx+(p[1]-y)*dy)/(dx*dx+dy*dy||1)));const d=(p[0]-x-t*dx)**2+(p[1]-y-t*dy)**2;if(d>max){max=d;index=i}}if(index>=0){keep.add(index);stack.push([a,index],[index,b])}}return [...keep].sort((a,b)=>a-b).map(i=>points[i])}
-const regions=source.features.map(f=>{const [name,lon,lat]=names[f.properties.shapeName]||[];if(!name)throw Error(f.properties.shapeName);const polygons=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;return {name,kind:f.properties.shapeName==='Kyiv'||f.properties.shapeName==='Sevastopol'?'city':f.properties.shapeName==='Autonomous Republic of Crimea'?'republic':'oblast',label:project([lon,lat]),paths:polygons.map(poly=>poly.map(ring=>simplify(ring.map(project))))}});
-writeFileSync('assets/maps/ukraine-regions.json',JSON.stringify({source:'https://www.geoboundaries.org/api/current/gbOpen/UKR/ADM1/',download:'https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/UKR/ADM1/geoBoundaries-UKR-ADM1_simplified.geojson',license:'ODbL-1.0',attribution:'© OpenStreetMap contributors; geoBoundaries (OpenStreetMap / Wambacher), boundaryID UKR-ADM1-14850775',viewBox:'0 0 1220 850',regions}));
-console.log('Prepared',regions.length,'administrative units');
+const polygons=f=>f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;
+// Adjacent Natural Earth polygons share vertices. Cancel their shared edges,
+// then stitch the coastline so Crimea has no Sevastopol boundary or seam.
+function dissolve(features){
+ const pointKey=p=>p.map(n=>n.toFixed(6)).join(',');const edges=new Map();
+ for(const f of features)for(const poly of polygons(f))for(const ring of poly)for(let i=1;i<ring.length;i++){
+  const a=pointKey(ring[i-1]),b=pointKey(ring[i]);if(a===b)continue;const key=[a,b].sort().join('|');if(edges.has(key))edges.delete(key);else edges.set(key,[a,b]);
+ }
+ const remaining=[...edges.values()],adj=new Map();remaining.forEach(([a,b],i)=>{for(const p of [a,b]){if(!adj.has(p))adj.set(p,[]);adj.get(p).push(i)}});
+ const used=new Set(),rings=[];
+ for(let i=0;i<remaining.length;i++){
+  if(used.has(i))continue;const [start,next]=remaining[i];used.add(i);const ring=[start,next];let p=next;
+  while(p!==start){const edge=adj.get(p)?.find(e=>!used.has(e));if(edge===undefined)throw Error('Unclosed Crimea coastline');used.add(edge);const [a,b]=remaining[edge];p=a===p?b:a;ring.push(p)}
+  rings.push(ring.map(p=>p.split(',').map(Number)));
+ }
+ if(rings.length!==1)throw Error('Expected one merged Crimea outline, got '+rings.length);
+ return [rings];
+}
+const crimea=source.features.filter(f=>['UA-43','UA-40'].includes(f.properties.iso_3166_2));
+const regions=source.features.filter(f=>names[f.properties.iso_3166_2]).map(f=>{
+ const iso=f.properties.iso_3166_2,name=names[iso];const coords=iso==='UA-43'?dissolve(crimea):polygons(f);
+ return {name,kind:iso==='UA-30'?'city':iso==='UA-43'?'republic':'oblast',...(iso==='UA-30'?{label:project([30.523,50.45])}:{}),paths:coords.map(poly=>poly.map(ring=>ring.map(project)))};
+});
+if(regions.length!==26)throw Error('Expected 24 oblasts, Crimea and Kyiv');
+writeFileSync('assets/maps/ukraine-regions.json',JSON.stringify({source:'Natural Earth 1:10m Admin 1',download:'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson',license:'Public domain',licenseURL:'https://www.naturalearthdata.com/about/terms-of-use/',note:'Ukraine selected by UA ISO codes, including all of Crimea. Sevastopol dissolved into the single Crimea outline. Geometry only; source country-control attributes are not used.',viewBox:'0 0 1220 825',regions}));
+console.log('Prepared Natural Earth alternative:',regions.length,'shapes; one Crimea outline.');

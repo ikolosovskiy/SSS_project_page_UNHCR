@@ -37,3 +37,9 @@ assert(priorities.every(t=>t[0]===t[0].toLocaleUpperCase('uk')),'Priority first 
 
 assert(!/<text\b/.test(readFileSync('assets/maps/project-geography.svg','utf8')),'No permanent labels on map');
 assert(!/ради ВПО/i.test(html.match(/<figure class="project-map">[\s\S]*?<\/figure>/)[0]),'No council information in map');
+
+assert(!html.includes('data-region="м. Севастополь"'),'Sevastopol is not separate');
+assert.equal(mapData.regions.find(r=>r.name==='АР Крим').paths.length,1,'Single merged Crimea outline');
+assert.equal(mapData.regions.find(r=>r.name==='АР Крим').paths[0].length,1,'No Sevastopol hole or boundary');
+assert.equal(mapData.license,'Public domain','Alternative data source');
+assert(!/map-legend|map-help|map-credit|<figcaption>/.test(html.match(/<figure class="project-map">[\s\S]*?<\/figure>/)[0]),'No map captions or legend');
