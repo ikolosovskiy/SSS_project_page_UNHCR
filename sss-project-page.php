@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SSS Project Page 2026
  * Description: Сторінка проєкту соціального захисту. Шорткод: [sss_project_2026].
- * Version: 1.0.2
+ * Version: 1.0.4
  * Requires at least: 6.3
  * Requires PHP: 7.4
  * Author: SSS
@@ -11,8 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 function sss_project_2026_assets() {
     $url = plugin_dir_url( __FILE__ );
-    wp_enqueue_style( 'sss-project-2026', $url . 'style.css', array(), '1.0.2' );
-    wp_enqueue_script( 'sss-project-2026', $url . 'main.js', array(), '1.0.2', true );
+    wp_enqueue_style( 'sss-project-2026', $url . 'style.css', array(), '1.0.4' );
+    wp_enqueue_script( 'sss-project-2026', $url . 'main.js', array(), '1.0.4', true );
 }
 function sss_project_2026_maybe_enqueue() {
     if ( is_singular() ) {
@@ -45,4 +45,3 @@ function sss_project_2026_render( $attributes = array() ) {
     return $html;
 }
 add_shortcode( 'sss_project_2026', 'sss_project_2026_render' );
-

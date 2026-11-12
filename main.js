@@ -55,25 +55,36 @@
     });
   }
   const menu = root.querySelector('.menu-toggle');
-  const mobileNav = root.querySelector('.mobile-nav');
-  const closeMenu = () => {
-    if (!menu || !mobileNav) return;
+  const menuDialog = root.querySelector('.project-menu');
+  let previousOverflow = '';
+  const syncClosedMenu = () => {
+    // Ignore a delayed close event if the dialog has already reopened.
+    if (menuDialog.open) return;
+    document.body.style.overflow = previousOverflow;
     menu.setAttribute('aria-expanded', 'false');
-    menu.setAttribute('aria-label', 'Відкрити меню');
-    mobileNav.hidden = true;
+    menu.setAttribute('aria-label', 'Відкрити меню розділів');
+  };
+  const closeMenu = () => {
+    if (menuDialog?.open) {
+      menuDialog.close();
+      syncClosedMenu();
+    }
   };
   menu?.addEventListener('click', () => {
-    const open = menu.getAttribute('aria-expanded') !== 'true';
-    menu.setAttribute('aria-expanded', String(open));
-    menu.setAttribute('aria-label', open ? 'Закрити меню' : 'Відкрити меню');
-    mobileNav.hidden = !open;
+    if (menuDialog.open) { closeMenu(); return; }
+    previousOverflow = document.body.style.overflow;
+    menuDialog.showModal();
+    document.body.style.overflow = 'hidden';
+    menu.setAttribute('aria-expanded', 'true');
+    menu.setAttribute('aria-label', 'Закрити меню розділів');
   });
+  menuDialog?.addEventListener('close', syncClosedMenu);
+  root.querySelector('.menu-close')?.addEventListener('click', closeMenu);
   root.addEventListener('keydown', event => {
     if (event.key === 'Escape' && menu?.getAttribute('aria-expanded') === 'true') {
       closeMenu(); menu.focus();
     }
   });
-  window.matchMedia('(min-width: 801px)').addEventListener('change', event => { if (event.matches) closeMenu(); });
   root.addEventListener('click', event => {
     const link = event.target.closest('a[href^="#"]');
     if (!link) return;
