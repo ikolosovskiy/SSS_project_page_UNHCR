@@ -25,9 +25,26 @@ for(const width of [1440,1024,768,390,320]){
   await evaluate(`document.querySelector('#geography').open=true;document.querySelector('#geography').scrollIntoView()`);
   const mapLayout=await evaluate(`({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,covered:document.querySelectorAll('.map-region[data-covered="true"]').length,labels:document.querySelectorAll('.map-label').length,caption:document.querySelector('#geography summary').textContent.trim(),labelCollisions:(()=>{const labels=[...document.querySelectorAll('.map-label,.map-city-label')];return labels.flatMap((a,i)=>labels.slice(i+1).filter(b=>{const x=a.getBBox(),y=b.getBBox();return x.x<y.x+y.width&&x.x+x.width>y.x&&x.y<y.y+y.height&&x.y+x.height>y.y}).map(b=>[a.textContent,b.textContent]))})()})`);
   assert.equal(mapLayout.labelCollisions.length,0,JSON.stringify(mapLayout.labelCollisions));
-  assert(mapLayout.scrollWidth<=mapLayout.width&&mapLayout.covered===23&&mapLayout.labels===25&&mapLayout.caption.startsWith('23 області'),'Responsive map with 23 covered and all 24 oblast labels');
+  assert(mapLayout.scrollWidth<=mapLayout.width&&mapLayout.covered===23&&mapLayout.labels===0&&mapLayout.caption.startsWith('23 області'),'Responsive map with 23 covered and no permanent labels');
+  const hoverPoint=await evaluate(`(()=>{const r=document.querySelector('.map-region[data-region="Волинська"]').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`);
+  await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',...hoverPoint});
+  assert(await evaluate(`!document.querySelector('.map-tooltip').hidden&&document.querySelector('.map-tooltip').textContent==='Волинська область'&&document.querySelector('.map-region[data-region="Волинська"]').classList.contains('is-active')`),'Region name and highlight on mouse hover');
   if(width===1440||width===390){const rect=await evaluate(`(()=>{const r=document.querySelector('.project-map').getBoundingClientRect();return {x:r.left+scrollX,y:r.top+scrollY,width:r.width,height:r.height,scale:1}})()`);const shot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:rect});writeFileSync(`qa/geography-${width}.png`,Buffer.from(shot.data,'base64'));}
-  await evaluate(`document.querySelector('#geography').open=false;window.scrollTo(0,0)`);
+  await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',x:0,y:0});
+  assert(await evaluate(`document.querySelector('.map-tooltip').hidden`),'Tooltip hides when pointer leaves map');
+  if(width===390){
+    await cdp('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
+    await cdp('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[hoverPoint]});
+    await cdp('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await new Promise(r=>setTimeout(r,120));
+    assert(await evaluate(`!document.querySelector('.map-tooltip').hidden&&document.querySelector('.map-tooltip').textContent==='Волинська область'`),'Touch shows region name');
+    await cdp('Emulation.setTouchEmulationEnabled',{enabled:false});
+  }
+  await evaluate(`document.querySelector('.map-region[data-region="Луганська"]').focus()`);
+  assert(await evaluate(`!document.querySelector('.map-tooltip').hidden&&document.querySelector('.map-tooltip').textContent==='Луганська область'`),'Keyboard focus exposes neutral oblast name');
+  await evaluate(`document.querySelector('.map-capital-pin').focus()`);
+  assert(await evaluate(`document.querySelector('.map-tooltip').textContent==='м. Київ'`),'Kyiv marker has own tooltip');
+  await evaluate(`document.querySelector('.map-capital-pin').blur();document.querySelector('#geography').open=false;window.scrollTo(0,0)`);
   if(width===1440||width===390){const shot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync(`qa/${width===1440?'desktop':'mobile'}.png`,Buffer.from(shot.data,'base64'));}
 }
 await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});

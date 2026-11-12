@@ -286,3 +286,7 @@ body:has(>.sss-project){margin:0}
 .sss-project .map-credit{font-size:14px;margin-top:12px}
 .sss-project .map-credit a{text-decoration:underline;text-underline-offset:3px}
 @media(max-width:600px){.sss-project .map-toolbar{align-items:flex-start;flex-direction:column;gap:16px}.sss-project .map-toolbar p{font-size:18px}.sss-project .map-legend{flex-direction:column;gap:12px}.sss-project .map-viewport{aspect-ratio:1/1}}
+
+.sss-project .map-region{cursor:default}
+.sss-project .map-tooltip{position:absolute;z-index:2;max-width:calc(100% - 24px);padding:16px 20px;border:1px solid var(--forest);border-radius:14px;background:var(--cream);color:var(--forest);font:500 18px/1.5 var(--font-body);pointer-events:none;overflow-wrap:break-word}
+@media(max-width:600px){.sss-project .map-tooltip{font-size:17px;padding:12px 16px}}

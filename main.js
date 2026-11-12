@@ -163,6 +163,59 @@
   const mapOut = map.querySelector('[data-map-zoom="out"]');
   const mapReset = map.querySelector('[data-map-zoom="reset"]');
   let mapZoom = 1, mapX = 0, mapY = 0, mapDrag = null;
+  const mapTooltip = map.querySelector('.map-tooltip');
+  const mapRegions = [...map.querySelectorAll('[data-region]')];
+  let focusedMapRegion = null, suppressMapClick = false;
+  // Native SVG titles remain a fallback without JS; custom cards avoid two tooltips.
+  mapRegions.forEach(region => region.querySelector('title')?.remove());
+  const hideMapTooltip = () => {
+    mapTooltip.hidden = true;
+    mapRegions.forEach(region => region.classList.remove('is-active'));
+  };
+  const showMapTooltip = (region, point) => {
+    if (!region || mapDrag) { hideMapTooltip(); return; }
+    const viewport = mapViewport.getBoundingClientRect();
+    const rect = region.getBoundingClientRect();
+    mapTooltip.textContent = region.dataset.regionName;
+    mapTooltip.hidden = false;
+    mapRegions.forEach(item => item.classList.toggle('is-active', item.dataset.region === region.dataset.region));
+    const width = mapTooltip.offsetWidth, height = mapTooltip.offsetHeight;
+    const x = (point?.clientX ?? rect.left + rect.width / 2) - viewport.left;
+    const y = (point?.clientY ?? rect.top + rect.height / 2) - viewport.top;
+    const left = x + width + 24 > viewport.width ? x - width - 16 : x + 16;
+    const top = y + height + 24 > viewport.height ? y - height - 16 : y + 16;
+    mapTooltip.style.left = Math.max(8, Math.min(viewport.width - width - 8, left)) + 'px';
+    mapTooltip.style.top = Math.max(8, Math.min(viewport.height - height - 8, top)) + 'px';
+  };
+  mapViewport.addEventListener('pointermove', event => {
+    if (event.pointerType !== 'mouse') return;
+    const region = event.target.closest('[data-region]');
+    if (region) showMapTooltip(region, event);
+    else hideMapTooltip();
+  });
+  mapViewport.addEventListener('pointerleave', event => {
+    if (event.pointerType !== 'mouse') return;
+    hideMapTooltip();
+  });
+  mapViewport.addEventListener('click', event => {
+    if (suppressMapClick) { suppressMapClick = false; return; }
+    const target = event.detail === 0 ? event.target : document.elementFromPoint(event.clientX, event.clientY);
+    const region = target?.closest('[data-region]');
+    if (region) showMapTooltip(region, event.detail === 0 ? null : event);
+    else hideMapTooltip();
+  });
+  mapViewport.addEventListener('focusin', event => {
+    focusedMapRegion = event.target.closest('[data-region]');
+    if (focusedMapRegion) showMapTooltip(focusedMapRegion);
+  });
+  mapViewport.addEventListener('focusout', () => queueMicrotask(() => {
+    focusedMapRegion = mapViewport.contains(document.activeElement) ? document.activeElement.closest('[data-region]') : null;
+    if (!focusedMapRegion) hideMapTooltip();
+  }));
+  root.addEventListener('pointerdown', event => { if (!map.contains(event.target)) hideMapTooltip(); });
+  root.querySelector('#geography').addEventListener('toggle', event => {
+    if (!event.target.open) { focusedMapRegion = null; hideMapTooltip(); }
+  });
   const renderMap = () => {
     const rect = mapViewport.getBoundingClientRect();
     const limitX = rect.width * (mapZoom - 1) / 2;
@@ -176,29 +229,35 @@
     mapOut.disabled = mapZoom === 1;
     mapIn.disabled = mapZoom === 5;
   };
-  const zoomMap = change => { mapZoom = Math.max(1, Math.min(5, mapZoom + change)); renderMap(); };
+  const zoomMap = change => { hideMapTooltip(); mapZoom = Math.max(1, Math.min(5, mapZoom + change)); renderMap(); };
   mapIn.addEventListener('click', () => zoomMap(.5));
   mapOut.addEventListener('click', () => zoomMap(-.5));
-  mapReset.addEventListener('click', () => { mapZoom = 1; mapX = mapY = 0; renderMap(); });
+  mapReset.addEventListener('click', () => { hideMapTooltip(); mapZoom = 1; mapX = mapY = 0; renderMap(); });
   mapViewport.addEventListener('pointerdown', event => {
     if (mapZoom === 1 || event.button !== 0 || mapDrag) return;
     event.preventDefault();
-    mapDrag = { id: event.pointerId, x: event.clientX, y: event.clientY, originX: mapX, originY: mapY };
+    hideMapTooltip();
+    mapDrag = { moved: false, id: event.pointerId, x: event.clientX, y: event.clientY, originX: mapX, originY: mapY };
     mapViewport.setPointerCapture(event.pointerId);
     mapViewport.classList.add('is-dragging');
   });
   mapViewport.addEventListener('pointermove', event => {
     if (!mapDrag || mapDrag.id !== event.pointerId) return;
+    if (Math.hypot(event.clientX - mapDrag.x, event.clientY - mapDrag.y) > 6) mapDrag.moved = true;
     mapX = mapDrag.originX + event.clientX - mapDrag.x;
     mapY = mapDrag.originY + event.clientY - mapDrag.y;
     renderMap();
   });
-  const endMapDrag = () => { mapDrag = null; mapViewport.classList.remove('is-dragging'); };
+  const endMapDrag = () => { if (mapDrag?.moved) suppressMapClick = true; mapDrag = null; mapViewport.classList.remove('is-dragging'); };
   mapViewport.addEventListener('pointerup', endMapDrag);
   mapViewport.addEventListener('pointercancel', endMapDrag);
   mapViewport.addEventListener('lostpointercapture', endMapDrag);
   mapViewport.addEventListener('keydown', event => {
-    if (event.key === '+' || event.key === '=') { event.preventDefault(); zoomMap(.5); }
+    if (event.key === 'Enter' || event.key === ' ') {
+      const region = event.target.closest('[data-region]');
+      if (region) { event.preventDefault(); showMapTooltip(region); }
+    }
+    else if (event.key === '+' || event.key === '=') { event.preventDefault(); zoomMap(.5); }
     else if (event.key === '-') { event.preventDefault(); zoomMap(-.5); }
     else if (event.key === '0' || event.key === 'Escape') { event.preventDefault(); mapReset.click(); }
     else if (mapZoom > 1 && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) {
