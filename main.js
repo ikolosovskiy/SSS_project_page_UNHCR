@@ -85,19 +85,24 @@
       closeMenu(); menu.focus();
     }
   });
-  const indexToggle = root.querySelector('.section-index-toggle');
-  const closeSectionIndex = () => {
-    root.classList.remove('section-index-open');
-    indexToggle.setAttribute('aria-expanded', 'false');
-  };
-  root.classList.add('has-section-index');
-  indexToggle.hidden = false;
-  indexToggle.addEventListener('click', () => {
-    const open = root.classList.toggle('section-index-open');
-    indexToggle.setAttribute('aria-expanded', String(open));
+  root.querySelector('.header-search')?.addEventListener('click', () => {
+    if (!menuDialog.open) menu.click();
+    menuDialog.querySelector('input[type="search"]').focus();
   });
-  indexToggle.parentElement.parentElement.addEventListener('keydown', event => {
-    if (event.key === 'Escape') { closeSectionIndex(); indexToggle.focus(); }
+  const pageContents = root.querySelector('.page-contents');
+  const closeSectionIndex = () => {
+    const state = disclosureExpansion.get(pageContents);
+    if (state) {
+      disclosureExpansion.delete(pageContents);
+      state.animation?.cancel();
+    }
+    pageContents.open = false;
+    pageContents.style.height = '';
+    pageContents.style.overflow = '';
+    pageContents.querySelector('summary').setAttribute('aria-expanded', 'false');
+  };
+  pageContents.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { closeSectionIndex(); pageContents.querySelector('summary').focus(); }
   });
   root.addEventListener('click', event => {
     const link = event.target.closest('a[href^="#"]');
@@ -176,7 +181,7 @@
       disclosureExpansion.set(details, state);
       state.animation = details.animate([
         { height: from + 'px' }, { height: to + 'px' }
-      ], { duration: 680, easing: 'cubic-bezier(.25,.6,.25,1)', fill: 'forwards' });
+      ], { duration: details === pageContents ? 440 : 680, easing: 'cubic-bezier(.25,.6,.25,1)', fill: 'forwards' });
       state.animation.finished.then(() => finishExpansion(details, state)).catch(() => {});
     });
     details.addEventListener('toggle', () => {
@@ -194,15 +199,15 @@
     (disclosureAnimations.get(details) || []).forEach(animation => animation.cancel());
     disclosureAnimations.delete(details);
   };
-  root.querySelectorAll('.story-details').forEach(details => {
+  root.querySelectorAll('.story-details, .page-contents').forEach(details => {
     details.addEventListener('toggle', () => {
       stopDisclosureAnimation(details);
       if (!details.open || motion.matches) return;
-      const paragraphs = details.querySelectorAll('.prose>p, .prose>ul, .prose>.portal-results, .story-gallery img');
+      const paragraphs = details.querySelectorAll('.prose>p, .prose>ul, .prose>.portal-results, .story-gallery img, .section-nav a');
       const animations = [...paragraphs].map((paragraph, index) => paragraph.animate([
         { opacity: 0, transform: 'translateY(12px)' },
         { opacity: 1, transform: 'translateY(0)' }
-      ], { duration: 480, delay: Math.min(index, 6) * 70, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' }));
+      ], { duration: details === pageContents ? 360 : 480, delay: details === pageContents ? index * 35 : Math.min(index, 6) * 70, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' }));
       disclosureAnimations.set(details, animations);
     });
   });
