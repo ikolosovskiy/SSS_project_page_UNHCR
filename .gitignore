@@ -1,0 +1,11 @@
+node_modules/
+.cache/
+.taste-skill/
+qa/*.png
+qa/*.json
+*.zip
+research/*.html
+!research/content-updated.html
+research/logo.js
+research/latest-text.txt
+research/pdf-review/
