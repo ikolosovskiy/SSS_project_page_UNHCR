@@ -25,3 +25,12 @@ assert.deepEqual(colors.sort(),['#314C2C','#F6B93B','#FBF6EC'].sort(),'Exactly t
 
 assert.equal((html.match(/data-priority/g)||[]).length,5,'Five scroll-revealed source priorities');
 assert(!html.includes('about-details'),'About summary is always visible');
+
+const mapData=JSON.parse(readFileSync('assets/maps/ukraine-regions.json','utf8'));
+assert.equal(mapData.regions.filter(r=>r.kind==='oblast').length,24,'All oblast boundaries');
+assert.equal((html.match(/data-covered="true"/g)||[]).length,23,'Exactly 23 highlighted oblasts');
+assert(html.includes('data-label="Луганська"')&&html.includes('data-label="АР Крим"')&&html.includes('м. Київ'),'All regions and separate capital marker');
+assert(!html.includes('about-support')&&!html.includes('about-context'),'Removed screenshot block');
+const priorities=[...html.matchAll(/data-priority><span>\d<\/span><b>([^<]+)/g)].map(m=>m[1]);
+assert.equal(priorities.length,5);
+assert(priorities.every(t=>t[0]===t[0].toLocaleUpperCase('uk')),'Priority first letters are uppercase');

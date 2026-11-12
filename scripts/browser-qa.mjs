@@ -22,6 +22,12 @@ for(const width of [1440,1024,768,390,320]){
   await evaluate(`Promise.all([...document.images].map(i=>{i.loading='eager';return i.decode().catch(()=>null)}))`);
   const geometry=await evaluate(`({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,images:[...document.images].filter(i=>!i.closest('details:not([open])')).map(i=>({src:i.getAttribute('src'),ok:i.complete&&i.naturalWidth>0})),h1:document.querySelector('h1').getBoundingClientRect().toJSON(),overflows:[...document.querySelectorAll('.sss-project *')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&(r.right>innerWidth+1||r.left< -1)&&getComputedStyle(e).position!=='fixed'&&!e.closest('.section-nav')&&!e.closest('details:not([open])')}).map(e=>e.className).slice(0,15)})`);
   report.push(geometry);
+  await evaluate(`document.querySelector('#geography').open=true;document.querySelector('#geography').scrollIntoView()`);
+  const mapLayout=await evaluate(`({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,covered:document.querySelectorAll('.map-region[data-covered="true"]').length,labels:document.querySelectorAll('.map-label').length,caption:document.querySelector('#geography summary').textContent.trim(),labelCollisions:(()=>{const labels=[...document.querySelectorAll('.map-label,.map-city-label')];return labels.flatMap((a,i)=>labels.slice(i+1).filter(b=>{const x=a.getBBox(),y=b.getBBox();return x.x<y.x+y.width&&x.x+x.width>y.x&&x.y<y.y+y.height&&x.y+x.height>y.y}).map(b=>[a.textContent,b.textContent]))})()})`);
+  assert.equal(mapLayout.labelCollisions.length,0,JSON.stringify(mapLayout.labelCollisions));
+  assert(mapLayout.scrollWidth<=mapLayout.width&&mapLayout.covered===23&&mapLayout.labels===25&&mapLayout.caption.startsWith('23 області'),'Responsive map with 23 covered and all 24 oblast labels');
+  if(width===1440||width===390){const rect=await evaluate(`(()=>{const r=document.querySelector('.project-map').getBoundingClientRect();return {x:r.left+scrollX,y:r.top+scrollY,width:r.width,height:r.height,scale:1}})()`);const shot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:rect});writeFileSync(`qa/geography-${width}.png`,Buffer.from(shot.data,'base64'));}
+  await evaluate(`document.querySelector('#geography').open=false;window.scrollTo(0,0)`);
   if(width===1440||width===390){const shot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync(`qa/${width===1440?'desktop':'mobile'}.png`,Buffer.from(shot.data,'base64'));}
 }
 await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
@@ -121,6 +127,13 @@ report.push({revised});
 const informationHierarchy=await evaluate(`({visibleEventBlocks:document.querySelectorAll('.chapter-events').length,aboutDetails:!!document.querySelector('#about .about-details'),prioritiesHidden:!!document.querySelector('.priorities').closest('details'),forumListsHidden:[...document.querySelectorAll('#institutions .source-list,#councils .source-list')].every(e=>!!e.closest('details')),aboutWidth:document.querySelector('.about-lead').getBoundingClientRect().width,aboutFont:parseFloat(getComputedStyle(document.querySelector('.about-lead')).fontSize),badgeHeight:document.querySelector('.menu-toggle').getBoundingClientRect().height,logoHeight:document.querySelector('.menu-toggle img').getBoundingClientRect().height,detailCount:document.querySelectorAll('details').length})`);
 assert(informationHierarchy.visibleEventBlocks===0&&!informationHierarchy.aboutDetails&&!informationHierarchy.prioritiesHidden&&informationHierarchy.forumListsHidden&&informationHierarchy.aboutFont>=22&&informationHierarchy.badgeHeight===52&&informationHierarchy.logoHeight===26&&informationHierarchy.detailCount===8,'Progressive disclosure, readable overview and reference badge sizing');
 report.push({informationHierarchy});
+await evaluate(`document.querySelector('#geography').open=true;document.querySelector('[data-map-zoom="in"]').click()`);
+assert(await evaluate(`document.querySelector('[data-map-zoom="reset"]').textContent==='150%'&&document.querySelector('.map-viewport').classList.contains('is-zoomed')`),'Map zoom control');
+await evaluate(`document.querySelector('.map-viewport').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))`);
+assert(await evaluate(`document.querySelector('.map-stage').style.transform.includes('-40px')`),'Keyboard pans enlarged map');
+await evaluate(`document.querySelector('[data-map-zoom="reset"]').click()`);
+assert(await evaluate(`document.querySelector('[data-map-zoom="reset"]').textContent==='100%'&&document.querySelector('[data-map-zoom="out"]').disabled`),'Map reset');
+await evaluate(`document.querySelector('#geography').open=false`);
 const reducedMotion=await evaluate(`matchMedia('(prefers-reduced-motion: reduce)').matches&&getComputedStyle(document.querySelector('[data-enter]')).animationName==='none'`);
 const brokenImages=await evaluate(`Promise.all([...document.images].map(i=>{i.loading='eager';return i.decode().catch(()=>null)})).then(()=>[...document.images].filter(i=>i.naturalWidth===0).map(i=>i.src))`);
 report.push({menuOpened,menuClosed,anchor,disclosure,reducedMotion,brokenImages});

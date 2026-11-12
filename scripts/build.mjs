@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { geographyMarkup } from './geography.mjs';
 process.chdir(fileURLToPath(new URL('..', import.meta.url)));
 const source = readFileSync('research/content.md', 'utf8');
 const updated = readFileSync('research/content-updated.html', 'utf8');
@@ -30,13 +31,13 @@ const chapterMarkup = chapters.map((c, i) => `<section class="chapter section ${
 
     </div><div class="chapter-photo photo-frame" data-reveal>${photo(c.image,c.alt,'loading="lazy"')}</div></div>
     <div class="chapter-stats">${c.stats.map(([n,t])=>`<div><b>${n}</b><span>${t}</span></div>`).join('')}</div>
-    <details class="story-details"><summary><span>Докладніше</span><span class="disclosure-hint" aria-hidden="true"></span><span class="disclosure-icon" aria-hidden="true">+</span></summary><div class="story-body"><div class="prose">${article(i)}</div><div class="story-gallery">${c.gallery.map(n=>photo(n, ['','','','Форум соціальних змін у Бучі','Передача велосипедів і скутерів соціальним працівникам','','Центральноукраїнський форум рад ВПО у Білій Церкві','Обмінний візит рад ВПО у Полтаві','Нагородження відзнакою «ЗаРади майбутнього»','','Воркшоп для надавачів соціальних послуг у Миколаєві','Кухонна зона у місці тимчасового проживання до ремонту','Моніторинговий візит до місця тимчасового проживання у Кіровоградській області'][n] || c.alt,'loading="lazy"')).join('')}</div></div></details>
+    <details class="story-details"><summary><span>Докладніше</span><span class="disclosure-hint" aria-hidden="true"></span><span class="disclosure-icon" aria-hidden="true">+</span></summary><div class="story-body"><div class="prose">${i===1?'<p>Ради з питань внутрішньо переміщених осіб (ради ВПО) представляють права та інтереси внутрішньо переміщених людей на локальному рівні.</p>':''}${article(i)}</div><div class="story-gallery">${c.gallery.map(n=>photo(n, ['','','','Форум соціальних змін у Бучі','Передача велосипедів і скутерів соціальним працівникам','','Центральноукраїнський форум рад ВПО у Білій Церкві','Обмінний візит рад ВПО у Полтаві','Нагородження відзнакою «ЗаРади майбутнього»','','Воркшоп для надавачів соціальних послуг у Миколаєві','Кухонна зона у місці тимчасового проживання до ремонту','Моніторинговий візит до місця тимчасового проживання у Кіровоградській області'][n] || c.alt,'loading="lazy"')).join('')}</div></div></details>
   </div></section>${i === 1 ? readFileSync('portal.html', 'utf8') : ''}`).join('');
 const priorityTargets = ['institutions','councils','advocacy','ombudsman','ombudsman'];
 const priorityItems = [...source.slice(0, source.indexOf('**КЛЮЧОВІ РЕЗУЛЬТАТИ')).matchAll(/^\* (.+)$/gm)].map(match => match[1].trim().replace(/;$/, ''));
 if (priorityItems.length !== 5) throw new Error('Expected all five source priorities');
-const priorityMarkup = priorityItems.map((text, i) => `<a href="#${priorityTargets[i]}" data-priority><span>${i+1}</span><b>${escape(text)}</b><span aria-hidden="true">↗</span></a>`).join('');
-let html = readFileSync('page.template.html', 'utf8').replace('<!-- CHAPTERS -->', chapterMarkup).replace('<!-- PRIORITIES -->', priorityMarkup).replace('<!-- REGIONS -->', regionNames.map(n=>`<li>${n}</li>`).join('')).replace('<!-- ADVOCACY -->', article(4)).replace('<!-- RESOURCES -->', resources.map((r,i)=>`<a class="resource-link" href="${escape(r.url)}" target="_blank" rel="noopener noreferrer"><span class="resource-no">${String(i+1)}</span><span>${escape(r.title)}</span>${arrow}</a>`).join(''));
+const priorityMarkup = priorityItems.map((text, i) => `<a href="#${priorityTargets[i]}" data-priority><span>${i+1}</span><b>${escape(text.charAt(0).toLocaleUpperCase('uk')+text.slice(1))}</b><span aria-hidden="true">↗</span></a>`).join('');
+let html = readFileSync('page.template.html', 'utf8').replace('<!-- CHAPTERS -->', chapterMarkup).replace('<!-- PRIORITIES -->', priorityMarkup).replace('<!-- GEOGRAPHY_MAP -->', geographyMarkup(regionNames)).replace('<!-- ADVOCACY -->', article(4)).replace('<!-- RESOURCES -->', resources.map((r,i)=>`<a class="resource-link" href="${escape(r.url)}" target="_blank" rel="noopener noreferrer"><span class="resource-no">${String(i+1)}</span><span>${escape(r.title)}</span>${arrow}</a>`).join(''));
 html = html.replace('<!-- NEWS -->', newsMarkup).replace(/[ \t]+$/gm, '');
 writeFileSync('index.html', html);
 // The WordPress shortcode uses the same content as the standalone preview.

@@ -156,6 +156,59 @@
       priorities.forEach(priority => priority.classList.remove('priority-pending'));
     });
   }
+  const map = root.querySelector('.project-map');
+  const mapViewport = map.querySelector('.map-viewport');
+  const mapStage = map.querySelector('.map-stage');
+  const mapIn = map.querySelector('[data-map-zoom="in"]');
+  const mapOut = map.querySelector('[data-map-zoom="out"]');
+  const mapReset = map.querySelector('[data-map-zoom="reset"]');
+  let mapZoom = 1, mapX = 0, mapY = 0, mapDrag = null;
+  const renderMap = () => {
+    const rect = mapViewport.getBoundingClientRect();
+    const limitX = rect.width * (mapZoom - 1) / 2;
+    const limitY = rect.height * (mapZoom - 1) / 2;
+    mapX = Math.max(-limitX, Math.min(limitX, mapX));
+    mapY = Math.max(-limitY, Math.min(limitY, mapY));
+    mapStage.style.transform = 'translate(' + mapX + 'px,' + mapY + 'px) scale(' + mapZoom + ')';
+    mapViewport.classList.toggle('is-zoomed', mapZoom > 1);
+    mapReset.textContent = Math.round(mapZoom * 100) + '%';
+    mapReset.setAttribute('aria-label', 'Показати всю мапу. Поточний масштаб ' + Math.round(mapZoom * 100) + '%');
+    mapOut.disabled = mapZoom === 1;
+    mapIn.disabled = mapZoom === 5;
+  };
+  const zoomMap = change => { mapZoom = Math.max(1, Math.min(5, mapZoom + change)); renderMap(); };
+  mapIn.addEventListener('click', () => zoomMap(.5));
+  mapOut.addEventListener('click', () => zoomMap(-.5));
+  mapReset.addEventListener('click', () => { mapZoom = 1; mapX = mapY = 0; renderMap(); });
+  mapViewport.addEventListener('pointerdown', event => {
+    if (mapZoom === 1 || event.button !== 0 || mapDrag) return;
+    event.preventDefault();
+    mapDrag = { id: event.pointerId, x: event.clientX, y: event.clientY, originX: mapX, originY: mapY };
+    mapViewport.setPointerCapture(event.pointerId);
+    mapViewport.classList.add('is-dragging');
+  });
+  mapViewport.addEventListener('pointermove', event => {
+    if (!mapDrag || mapDrag.id !== event.pointerId) return;
+    mapX = mapDrag.originX + event.clientX - mapDrag.x;
+    mapY = mapDrag.originY + event.clientY - mapDrag.y;
+    renderMap();
+  });
+  const endMapDrag = () => { mapDrag = null; mapViewport.classList.remove('is-dragging'); };
+  mapViewport.addEventListener('pointerup', endMapDrag);
+  mapViewport.addEventListener('pointercancel', endMapDrag);
+  mapViewport.addEventListener('lostpointercapture', endMapDrag);
+  mapViewport.addEventListener('keydown', event => {
+    if (event.key === '+' || event.key === '=') { event.preventDefault(); zoomMap(.5); }
+    else if (event.key === '-') { event.preventDefault(); zoomMap(-.5); }
+    else if (event.key === '0' || event.key === 'Escape') { event.preventDefault(); mapReset.click(); }
+    else if (mapZoom > 1 && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) {
+      event.preventDefault();
+      mapX += event.key === 'ArrowLeft' ? 40 : event.key === 'ArrowRight' ? -40 : 0;
+      mapY += event.key === 'ArrowUp' ? 40 : event.key === 'ArrowDown' ? -40 : 0;
+      renderMap();
+    }
+  });
+  window.addEventListener('resize', renderMap);
   const navLinks = [...root.querySelectorAll('.section-nav a')];
   const sections = navLinks.map(link => document.getElementById(link.hash.slice(1)));
   const progress = root.querySelector('.reading-progress');
