@@ -62,7 +62,7 @@
     if (menuDialog.open) return;
     document.body.style.overflow = previousOverflow;
     menu.setAttribute('aria-expanded', 'false');
-    menu.setAttribute('aria-label', 'Відкрити меню розділів');
+    menu.setAttribute('aria-label', 'Відкрити меню сайту');
   };
   const closeMenu = () => {
     if (menuDialog?.open) {
@@ -76,7 +76,7 @@
     menuDialog.showModal();
     document.body.style.overflow = 'hidden';
     menu.setAttribute('aria-expanded', 'true');
-    menu.setAttribute('aria-label', 'Закрити меню розділів');
+    menu.setAttribute('aria-label', 'Закрити меню сайту');
   });
   menuDialog?.addEventListener('close', syncClosedMenu);
   root.querySelector('.menu-close')?.addEventListener('click', closeMenu);
@@ -129,16 +129,36 @@
   window.addEventListener('scroll', () => { if (!scheduled) { scheduled = true; requestAnimationFrame(updateScroll); } }, { passive: true });
   window.addEventListener('resize', updateScroll);
   root.querySelectorAll('details').forEach(details => details.addEventListener('toggle', updateScroll));
-  updateScroll();
-  const share = root.querySelector('.share-button');
-  const feedback = root.querySelector('.share-feedback');
-  const canonical = 'https://sss-ua.org/projects/pidtrymka-spromozhnosti-derzhavnykh-ustanov-ta-mistsevykh-hromad-u-zmitsnenni-systemy-sotsialnoho-zakhystu-v-ukraini-2026/';
-  share.addEventListener('click', async () => {
-    try {
-      if (navigator.share) await navigator.share({ title: 'Підтримка спроможності державних установ та місцевих громад у зміцненні системи соціального захисту в Україні', url: canonical });
-      else { await navigator.clipboard.writeText(canonical); feedback.textContent = 'Посилання на проєкт скопійовано'; }
-    } catch (error) {
-      if (error.name !== 'AbortError') feedback.textContent = `Посилання на проєкт: ${canonical}`;
-    }
+  const disclosureAnimations = new Map();
+  const stopDisclosureAnimation = details => {
+    (disclosureAnimations.get(details) || []).forEach(animation => animation.cancel());
+    disclosureAnimations.delete(details);
+  };
+  root.querySelectorAll('.story-details').forEach(details => {
+    details.addEventListener('toggle', () => {
+      stopDisclosureAnimation(details);
+      if (!details.open || motion.matches) return;
+      const paragraphs = details.querySelectorAll('.prose>p, .prose>ul, .prose>.portal-results, .story-gallery img');
+      const animations = [...paragraphs].map((paragraph, index) => paragraph.animate([
+        { opacity: 0, transform: 'translateY(12px)' },
+        { opacity: 1, transform: 'translateY(0)' }
+      ], { duration: 480, delay: Math.min(index, 6) * 70, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' }));
+      disclosureAnimations.set(details, animations);
+    });
   });
+  if ('IntersectionObserver' in window && !motion.matches) {
+    const disclosureCue = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('disclosure-cue');
+          disclosureCue.unobserve(entry.target);
+        }
+      });
+    }, { threshold: .7 });
+    root.querySelectorAll('.story-details>summary').forEach(summary => disclosureCue.observe(summary));
+  }
+  motion.addEventListener('change', () => {
+    if (motion.matches) disclosureAnimations.forEach((_, details) => stopDisclosureAnimation(details));
+  });
+  updateScroll();
 })();
