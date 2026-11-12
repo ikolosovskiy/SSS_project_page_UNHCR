@@ -132,6 +132,30 @@
     });
     motion.addEventListener('change', () => { if (motion.matches) root.querySelectorAll('.is-pending').forEach(el => el.classList.remove('is-pending')); });
   }
+  // Each complete source priority enters once as the reader reaches it.
+  if ('IntersectionObserver' in window && !motion.matches) {
+    const priorities = [...root.querySelectorAll('[data-priority]')];
+    const priorityReveal = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.remove('priority-pending');
+        priorityReveal.unobserve(entry.target);
+      });
+    }, { threshold: .15, rootMargin: '0px 0px -6% 0px' });
+    priorities.forEach(priority => {
+      if (priority.getBoundingClientRect().top > innerHeight) priority.classList.add('priority-pending');
+      priorityReveal.observe(priority);
+      priority.addEventListener('focus', () => {
+        priority.classList.remove('priority-pending');
+        priorityReveal.unobserve(priority);
+      }, { once: true });
+    });
+    motion.addEventListener('change', () => {
+      if (!motion.matches) return;
+      priorityReveal.disconnect();
+      priorities.forEach(priority => priority.classList.remove('priority-pending'));
+    });
+  }
   const navLinks = [...root.querySelectorAll('.section-nav a')];
   const sections = navLinks.map(link => document.getElementById(link.hash.slice(1)));
   const progress = root.querySelector('.reading-progress');

@@ -26,6 +26,13 @@ for(const width of [1440,1024,768,390,320]){
 }
 await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
 await cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+await evaluate(`document.querySelector('[data-priority]').scrollIntoView({block:'center',behavior:'instant'})`);
+await new Promise(r=>setTimeout(r,120));
+const priorityMotion=await evaluate(`({running:document.querySelector('[data-priority]').getAnimations().some(a=>a.playState==='running'),laterPending:[...document.querySelectorAll('[data-priority]')].at(-1).classList.contains('priority-pending'),outsideDetails:[...document.querySelectorAll('[data-priority]')].every(a=>!a.closest('details'))})`);
+assert(priorityMotion.running&&priorityMotion.laterPending&&priorityMotion.outsideDetails,'Priorities reveal individually on scroll, outside disclosures');
+await new Promise(r=>setTimeout(r,750));
+assert(await evaluate(`getComputedStyle(document.querySelector('[data-priority]')).opacity==='1'`),'Priority appearance completes');
+report.push({priorityMotion});
 const indexClosed=await evaluate(`!document.querySelector('.page-contents').open`);
 const indexCollapsedHeight=await evaluate(`document.querySelector('.page-contents').getBoundingClientRect().height`);
 await evaluate(`document.querySelector('.page-contents summary').click();document.querySelector('.section-nav-shell').scrollIntoView()`);
@@ -112,7 +119,7 @@ const revised=await evaluate(`({breadcrumb:document.querySelector('.breadcrumbs'
 assert(!revised.projectLabel&&!revised.advocacyLogo&&!revised.share&&!revised.footerX&&revised.fullLogo.includes('logo-full')&&revised.logoWidth>200&&revised.partnerHref==='https://sss-ua.org/projects/?partner=unhcr-3'&&revised.partnerText.includes('Агентство ООН у справах біженців в Україні (УВКБ ООН)')&&revised.features===4&&revised.disclosures.every(t=>t==='Докладніше')&&Math.abs(revised.photoRatio-revised.naturalPhotoRatio)<.01,'Requested content, full logo and uncropped image');
 report.push({revised});
 const informationHierarchy=await evaluate(`({visibleEventBlocks:document.querySelectorAll('.chapter-events').length,aboutDetails:!!document.querySelector('#about .about-details'),prioritiesHidden:!!document.querySelector('.priorities').closest('details'),forumListsHidden:[...document.querySelectorAll('#institutions .source-list,#councils .source-list')].every(e=>!!e.closest('details')),aboutWidth:document.querySelector('.about-lead').getBoundingClientRect().width,aboutFont:parseFloat(getComputedStyle(document.querySelector('.about-lead')).fontSize),badgeHeight:document.querySelector('.menu-toggle').getBoundingClientRect().height,logoHeight:document.querySelector('.menu-toggle img').getBoundingClientRect().height,detailCount:document.querySelectorAll('details').length})`);
-assert(informationHierarchy.visibleEventBlocks===0&&informationHierarchy.prioritiesHidden&&informationHierarchy.forumListsHidden&&informationHierarchy.aboutFont>=22&&informationHierarchy.badgeHeight===52&&informationHierarchy.logoHeight===26&&informationHierarchy.detailCount===9,'Progressive disclosure, readable overview and reference badge sizing');
+assert(informationHierarchy.visibleEventBlocks===0&&!informationHierarchy.aboutDetails&&!informationHierarchy.prioritiesHidden&&informationHierarchy.forumListsHidden&&informationHierarchy.aboutFont>=22&&informationHierarchy.badgeHeight===52&&informationHierarchy.logoHeight===26&&informationHierarchy.detailCount===8,'Progressive disclosure, readable overview and reference badge sizing');
 report.push({informationHierarchy});
 const reducedMotion=await evaluate(`matchMedia('(prefers-reduced-motion: reduce)').matches&&getComputedStyle(document.querySelector('[data-enter]')).animationName==='none'`);
 const brokenImages=await evaluate(`Promise.all([...document.images].map(i=>{i.loading='eager';return i.decode().catch(()=>null)})).then(()=>[...document.images].filter(i=>i.naturalWidth===0).map(i=>i.src))`);
@@ -131,7 +138,7 @@ await evaluate(`document.querySelector('.menu-close').click()`);
 await new Promise(r=>setTimeout(r,100));
 await evaluate(`document.querySelector('#ombudsman').scrollIntoView()`);
 const kpiShot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync('qa/kpi-readability.png',Buffer.from(kpiShot.data,'base64'));
-for(const [name,selector] of [['section-index','.section-nav-shell'],['about','#about'],['portal','.portal-band'],['footer','.site-footer'],['news','#project-news'],['photo','.photo-moment'],['disclosure','#councils .story-details']]){
+for(const [name,selector] of [['section-index','.section-nav-shell'],['about','#about'],['about-overview','.about-overview'],['priorities','.priority-heading'],['portal','.portal-band'],['footer','.site-footer'],['news','#project-news'],['photo','.photo-moment'],['disclosure','#councils .story-details']]){
 await evaluate(`document.querySelector('${selector}').scrollIntoView()`);
 if(name==='section-index')await evaluate(`document.querySelector('.page-contents').open=true`);
 const capture=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync(`qa/${name}.png`,Buffer.from(capture.data,'base64'));
@@ -143,7 +150,7 @@ writeFileSync('qa/full-page.png',Buffer.from(shot.data,'base64'));
 await cdp('Emulation.setScriptExecutionDisabled',{value:true});
 await cdp('Page.reload');
 await new Promise(r=>setTimeout(r,500));
-const noJs=await evaluate(`getComputedStyle(document.querySelector('#about h2')).opacity==='1'&&document.querySelectorAll('details').length===9&&document.querySelector('.page-contents').open===false`);
+const noJs=await evaluate(`getComputedStyle(document.querySelector('#about h2')).opacity==='1'&&document.querySelectorAll('details').length===8&&document.querySelector('.page-contents').open===false&&[...document.querySelectorAll('[data-priority]')].every(a=>getComputedStyle(a).opacity==='1'&&!a.closest('details'))`);
 report.push({noJs});
 writeFileSync('qa/browser-report.json',JSON.stringify(report,null,2));
 console.log(JSON.stringify(report.map(item=>item.width?{width:item.width,scrollWidth:item.scrollWidth,overflows:item.overflows,broken:item.images.filter(i=>!i.ok)}:item),null,2));

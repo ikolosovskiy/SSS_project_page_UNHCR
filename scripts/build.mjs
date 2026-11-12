@@ -35,7 +35,7 @@ const chapterMarkup = chapters.map((c, i) => `<section class="chapter section ${
 const priorityTargets = ['institutions','councils','advocacy','ombudsman','ombudsman'];
 const priorityItems = [...source.slice(0, source.indexOf('**КЛЮЧОВІ РЕЗУЛЬТАТИ')).matchAll(/^\* (.+)$/gm)].map(match => match[1].trim().replace(/;$/, ''));
 if (priorityItems.length !== 5) throw new Error('Expected all five source priorities');
-const priorityMarkup = priorityItems.map((text, i) => `<a href="#${priorityTargets[i]}"><span>${i+1}</span><b>${escape(text)}</b><span aria-hidden="true">↗</span></a>`).join('');
+const priorityMarkup = priorityItems.map((text, i) => `<a href="#${priorityTargets[i]}" data-priority><span>${i+1}</span><b>${escape(text)}</b><span aria-hidden="true">↗</span></a>`).join('');
 let html = readFileSync('page.template.html', 'utf8').replace('<!-- CHAPTERS -->', chapterMarkup).replace('<!-- PRIORITIES -->', priorityMarkup).replace('<!-- REGIONS -->', regionNames.map(n=>`<li>${n}</li>`).join('')).replace('<!-- ADVOCACY -->', article(4)).replace('<!-- RESOURCES -->', resources.map((r,i)=>`<a class="resource-link" href="${escape(r.url)}" target="_blank" rel="noopener noreferrer"><span class="resource-no">${String(i+1)}</span><span>${escape(r.title)}</span>${arrow}</a>`).join(''));
 html = html.replace('<!-- NEWS -->', newsMarkup).replace(/[ \t]+$/gm, '');
 writeFileSync('index.html', html);
