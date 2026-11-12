@@ -22,6 +22,8 @@ const chapters = [
 ];
 const regionNames = ['Вінницька','Волинська','Дніпропетровська','Донецька','Житомирська','Закарпатська','Запорізька','Івано-Франківська','Кіровоградська','Київська','Львівська','Миколаївська','Одеська','Полтавська','Рівненська','Сумська','Тернопільська','Харківська','Херсонська','Хмельницька','Чернівецька','Черкаська','Чернігівська'];
 const resources = [...source.slice(source.indexOf('**КОРИСНІ ІНФОРМАЦІЙНІ МАТЕРІАЛИ')).matchAll(/^\* \[([^\]]+)\]\((https?:\/\/.+)\)\s*$/gm)].map(([,title,url])=>({title,url:url.trim()}));
+const news = JSON.parse(readFileSync('research/project-news.json', 'utf8'));
+const newsMarkup = `<section class="project-news section" id="project-news" aria-labelledby="project-news-title"><div class="wrap"><div class="news-heading"><h2 id="project-news-title">Новини проєкту</h2><a class="button button--dark" href="${escape(news.allUrl)}">Всі новини проєкту <span aria-hidden="true">↗</span></a></div><div class="news-grid">${news.items.map(item=>`<article class="news-card" data-reveal><a href="${escape(item.url)}"><img src="${item.image}" alt="${escape(item.title)}" width="547" height="318" loading="lazy"><div class="news-card-copy"><time datetime="${escape(item.datetime)}">${escape(item.date)}</time><h3>${escape(item.title)}</h3><span class="news-card-arrow" aria-hidden="true">↗</span></div></a></article>`).join('')}</div></div></section>`;
 const chapterMarkup = chapters.map((c, i) => `<section class="chapter section ${i % 2 ? 'chapter--reverse' : ''}" id="${c.id}" aria-labelledby="${c.id}-title">
   <div class="wrap"><div class="chapter-grid"><div class="chapter-copy" data-reveal>
     <div class="eyebrow"><span class="chapter-number">${c.no}</span>${c.tag}</div><h2 id="${c.id}-title">${c.title}</h2><p class="lead">${c.text}</p>
@@ -35,7 +37,7 @@ const priorityItems = [...source.slice(0, source.indexOf('**КЛЮЧОВІ РЕ�
 if (priorityItems.length !== 5) throw new Error('Expected all five source priorities');
 const priorityMarkup = priorityItems.map((text, i) => `<a href="#${priorityTargets[i]}"><span>${i+1}</span><b>${escape(text)}</b><span aria-hidden="true">↗</span></a>`).join('');
 let html = readFileSync('page.template.html', 'utf8').replace('<!-- CHAPTERS -->', chapterMarkup).replace('<!-- PRIORITIES -->', priorityMarkup).replace('<!-- REGIONS -->', regionNames.map(n=>`<li>${n}</li>`).join('')).replace('<!-- ADVOCACY -->', article(4)).replace('<!-- RESOURCES -->', resources.map((r,i)=>`<a class="resource-link" href="${escape(r.url)}" target="_blank" rel="noopener noreferrer"><span class="resource-no">${String(i+1)}</span><span>${escape(r.title)}</span>${arrow}</a>`).join(''));
-html = html.replace(/[ \t]+$/gm, '');
+html = html.replace('<!-- NEWS -->', newsMarkup).replace(/[ \t]+$/gm, '');
 writeFileSync('index.html', html);
 // The WordPress shortcode uses the same content as the standalone preview.
 writeFileSync('page-content.html', html.split('<!-- SSS_PROJECT_START -->')[1].split('<!-- SSS_PROJECT_END -->')[0].trim());

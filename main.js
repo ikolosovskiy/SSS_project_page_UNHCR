@@ -129,6 +129,51 @@
   window.addEventListener('scroll', () => { if (!scheduled) { scheduled = true; requestAnimationFrame(updateScroll); } }, { passive: true });
   window.addEventListener('resize', updateScroll);
   root.querySelectorAll('details').forEach(details => details.addEventListener('toggle', updateScroll));
+  const disclosureExpansion = new Map();
+  const finishExpansion = (details, state) => {
+    if (disclosureExpansion.get(details) !== state) return;
+    disclosureExpansion.delete(details);
+    details.open = state.wantOpen;
+    details.style.height = '';
+    details.style.overflow = '';
+    state.animation?.cancel();
+    details.querySelector('summary').setAttribute('aria-expanded', String(details.open));
+    updateScroll();
+  };
+  root.querySelectorAll('details').forEach(details => {
+    const summary = details.querySelector('summary');
+    summary.addEventListener('click', event => {
+      event.preventDefault();
+      const previous = disclosureExpansion.get(details);
+      const wantOpen = !(previous?.wantOpen ?? details.open);
+      const from = details.getBoundingClientRect().height;
+      previous?.animation?.cancel();
+      disclosureExpansion.delete(details);
+      details.style.height = '';
+      details.style.overflow = '';
+      summary.setAttribute('aria-expanded', String(wantOpen));
+      if (motion.matches) { details.open = wantOpen; return; }
+      details.open = true;
+      const to = wantOpen ? details.getBoundingClientRect().height : summary.getBoundingClientRect().height;
+      details.style.height = from + 'px';
+      details.style.overflow = 'hidden';
+      const state = { wantOpen, animation: null };
+      disclosureExpansion.set(details, state);
+      state.animation = details.animate([
+        { height: from + 'px' }, { height: to + 'px' }
+      ], { duration: 680, easing: 'cubic-bezier(.25,.6,.25,1)', fill: 'forwards' });
+      state.animation.finished.then(() => finishExpansion(details, state)).catch(() => {});
+    });
+    details.addEventListener('toggle', () => {
+      const state = disclosureExpansion.get(details);
+      if (!details.open && state) {
+        disclosureExpansion.delete(details);
+        state.animation?.cancel();
+        details.style.height = '';
+        details.style.overflow = '';
+      }
+    });
+  });
   const disclosureAnimations = new Map();
   const stopDisclosureAnimation = details => {
     (disclosureAnimations.get(details) || []).forEach(animation => animation.cancel());
@@ -158,7 +203,10 @@
     root.querySelectorAll('.story-details>summary').forEach(summary => disclosureCue.observe(summary));
   }
   motion.addEventListener('change', () => {
-    if (motion.matches) disclosureAnimations.forEach((_, details) => stopDisclosureAnimation(details));
+    if (motion.matches) {
+      disclosureAnimations.forEach((_, details) => stopDisclosureAnimation(details));
+      disclosureExpansion.forEach((state, details) => finishExpansion(details, state));
+    }
   });
   updateScroll();
 })();

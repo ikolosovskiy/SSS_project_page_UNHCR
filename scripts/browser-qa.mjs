@@ -39,7 +39,7 @@ const counterReduced=await evaluate(`document.querySelector('#institutions .coun
 const accessibility=await evaluate(`({numberSize:parseFloat(getComputedStyle(document.querySelector('#institutions .counter-value')).fontSize),labelSize:parseFloat(getComputedStyle(document.querySelector('#institutions .chapter-stats>div>span')).fontSize),metaSize:parseFloat(getComputedStyle(document.querySelector('.project-meta b')).fontSize),advocacy:getComputedStyle(document.querySelector('.advocacy')).backgroundColor,roadmap:getComputedStyle(document.querySelector('.roadmap')).backgroundColor,fixedMenu:getComputedStyle(document.querySelector('.project-menu-controls')).position,numbering:[...document.querySelectorAll('.chapter-number')].map(e=>e.textContent),priorityNumbers:[...document.querySelectorAll('.priorities a>span:first-child')].map(e=>e.textContent)})`);
 report.push({counterStarted,counterFinished,counterReduced,accessibility});
 assert(accessibility.numberSize>=36&&accessibility.labelSize>=16&&accessibility.metaSize>=16,'Readable KPI digits, labels and metadata');
-assert(accessibility.advocacy==='rgb(215, 230, 251)'&&accessibility.roadmap==='rgb(169, 212, 142)','Official brand colors');
+assert(accessibility.advocacy==='rgb(251, 246, 236)'&&accessibility.roadmap==='rgb(251, 246, 236)','Official brand colors');
 assert(accessibility.fixedMenu==='fixed'&&accessibility.numbering.join(',')==='1,2,3,4,5'&&accessibility.priorityNumbers.join(',')==='1,2,3,4,5','Fixed menu and natural numbering');
 await evaluate(`document.querySelector('.menu-toggle').click()`);
 const mobileMenuShot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync('qa/mobile-menu.png',Buffer.from(mobileMenuShot.data,'base64'));
@@ -64,16 +64,26 @@ const disclosure=await evaluate(`document.querySelector('#councils details').ope
 await cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
 await evaluate(`document.querySelector('#councils details').open=false`);
 await new Promise(r=>setTimeout(r,60));
+const collapsedHeight=await evaluate(`document.querySelector('#councils details').getBoundingClientRect().height`);
 await evaluate(`document.querySelector('#councils details summary').click()`);
 await new Promise(r=>setTimeout(r,80));
+const intermediateHeight=await evaluate(`document.querySelector('#councils details').getBoundingClientRect().height`);
 const paragraphAnimation=await evaluate(`document.querySelector('#councils .prose>p').getAnimations().some(a=>a.playState==='running')`);
 await new Promise(r=>setTimeout(r,1100));
 const paragraphsVisible=await evaluate(`getComputedStyle(document.querySelector('#councils .prose>p')).opacity==='1'`);
 await cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
 report.push({paragraphAnimation,paragraphsVisible});
-assert(paragraphAnimation&&paragraphsVisible,'Disclosure paragraph entrance');
+const expandedHeight=await evaluate(`document.querySelector('#councils details').getBoundingClientRect().height`);
+assert(paragraphAnimation&&paragraphsVisible&&intermediateHeight>collapsedHeight&&intermediateHeight<expandedHeight,'Animated height and paragraph entrance');
+await cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+await evaluate(`document.querySelector('#councils details summary').click()`);
+await new Promise(r=>setTimeout(r,100));
+assert(await evaluate(`document.querySelector('#councils details').open&&document.querySelector('#councils details').getBoundingClientRect().height<${expandedHeight}`),'Closing animation keeps content mounted');
+await new Promise(r=>setTimeout(r,750));
+assert(await evaluate(`!document.querySelector('#councils details').open&&document.querySelector('#councils details').style.height===''`),'Closing completes and clears height');
+await cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
 const revised=await evaluate(`({breadcrumb:document.querySelector('.breadcrumbs').innerText,projectLabel:!!document.querySelector('.project-label'),advocacyLogo:!!document.querySelector('.advocacy-symbol'),share:!!document.querySelector('.share-button'),footerX:!!document.querySelector('.site-footer a[href*="twitter"]'),fullLogo:document.querySelector('.menu-toggle img').getAttribute('src'),logoWidth:document.querySelector('.menu-toggle img').getBoundingClientRect().width,partnerHref:document.querySelector('.project-partner a').getAttribute('href'),partnerText:document.querySelector('.project-partner').innerText,features:document.querySelectorAll('.portal-feature').length,disclosures:[...document.querySelectorAll('.story-details>summary>span:first-child')].map(e=>e.textContent),photoRatio:document.querySelector('.photo-moment>img').getBoundingClientRect().height/document.querySelector('.photo-moment>img').getBoundingClientRect().width,naturalPhotoRatio:document.querySelector('.photo-moment>img').naturalHeight/document.querySelector('.photo-moment>img').naturalWidth})`);
-assert(!revised.projectLabel&&!revised.advocacyLogo&&!revised.share&&!revised.footerX&&revised.fullLogo.includes('logo-full')&&revised.logoWidth>200&&revised.partnerHref==='https://sss-ua.org/projects/?partner=unhcr-3'&&!revised.partnerText.includes('УВКБ')&&revised.features===4&&revised.disclosures.every(t=>t==='Докладніше')&&Math.abs(revised.photoRatio-revised.naturalPhotoRatio)<.01,'Requested content, full logo and uncropped image');
+assert(!revised.projectLabel&&!revised.advocacyLogo&&!revised.share&&!revised.footerX&&revised.fullLogo.includes('logo-full')&&revised.logoWidth>200&&revised.partnerHref==='https://sss-ua.org/projects/?partner=unhcr-3'&&revised.partnerText.includes('Агентство ООН у справах біженців в Україні (УВКБ ООН)')&&revised.features===4&&revised.disclosures.every(t=>t==='Докладніше')&&Math.abs(revised.photoRatio-revised.naturalPhotoRatio)<.01,'Requested content, full logo and uncropped image');
 report.push({revised});
 const informationHierarchy=await evaluate(`({visibleEventBlocks:document.querySelectorAll('.chapter-events').length,aboutDetails:!!document.querySelector('#about .about-details'),prioritiesHidden:!!document.querySelector('.priorities').closest('details'),forumListsHidden:[...document.querySelectorAll('#institutions .source-list,#councils .source-list')].every(e=>!!e.closest('details')),aboutWidth:document.querySelector('.about-lead').getBoundingClientRect().width,aboutFont:parseFloat(getComputedStyle(document.querySelector('.about-lead')).fontSize),badgeHeight:document.querySelector('.menu-toggle').getBoundingClientRect().height,logoHeight:document.querySelector('.menu-toggle img').getBoundingClientRect().height,detailCount:document.querySelectorAll('details').length})`);
 assert(informationHierarchy.visibleEventBlocks===0&&informationHierarchy.prioritiesHidden&&informationHierarchy.forumListsHidden&&informationHierarchy.aboutFont>=22&&informationHierarchy.badgeHeight===52&&informationHierarchy.logoHeight===26&&informationHierarchy.detailCount===8,'Progressive disclosure, readable overview and reference badge sizing');
@@ -89,7 +99,7 @@ await evaluate(`document.querySelector('.menu-close').click()`);
 await new Promise(r=>setTimeout(r,100));
 await evaluate(`document.querySelector('#ombudsman').scrollIntoView()`);
 const kpiShot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync('qa/kpi-readability.png',Buffer.from(kpiShot.data,'base64'));
-for(const [name,selector] of [['about','#about'],['portal','.portal-band'],['footer','.site-footer'],['photo','.photo-moment'],['disclosure','#councils .story-details']]){
+for(const [name,selector] of [['about','#about'],['portal','.portal-band'],['footer','.site-footer'],['news','#project-news'],['photo','.photo-moment'],['disclosure','#councils .story-details']]){
 await evaluate(`document.querySelector('${selector}').scrollIntoView()`);
 const capture=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync(`qa/${name}.png`,Buffer.from(capture.data,'base64'));
 }
