@@ -121,6 +121,7 @@ body:has(>.sss-project){margin:0}
 .sss-project #about-title{font-size:clamp(32px,3.7vw,54px);line-height:1.2}
 .sss-project #about-title>span{display:block}
 .sss-project .about-lead{font-size:24px;line-height:1.7;max-width:860px;margin-bottom:36px}
+.sss-project .about-lead a{text-decoration:underline;text-underline-offset:4px}
 .sss-project .regions{border-block:1px solid var(--line);margin-bottom:24px}
 .sss-project summary{list-style:none}
 .sss-project summary::-webkit-details-marker{display:none}
