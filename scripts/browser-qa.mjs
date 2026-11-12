@@ -11,6 +11,8 @@ socket.onmessage = ({data}) => { const message=JSON.parse(data);if(pending.has(m
 function cdp(method,params={}){return new Promise((resolve,reject)=>{const id=++serial;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}));});}
 async function evaluate(expression){const result=await cdp('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw Error(JSON.stringify(result.exceptionDetails));return result.result.value;}
 await cdp('Page.enable');
+await cdp('Emulation.setScriptExecutionDisabled',{value:false});
+await cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
 const report=[];
 for(const width of [1440,1024,768,390,320]){
   await cdp('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});
@@ -29,7 +31,7 @@ await new Promise(r=>setTimeout(r,180));
 const counterStarted=await evaluate(`!!document.querySelector('.results-grid .counter-value')&&document.querySelector('.results-grid .counter-value').textContent!=='2 376'`);
 await new Promise(r=>setTimeout(r,1400));
 const counterFinished=await evaluate(`document.querySelector('.results-grid .counter-value').textContent==='2 376'&&document.querySelector('.results-grid .counter-accessible').textContent==='2 376'`);
-await evaluate(`document.querySelector('#institutions').scrollIntoView()`);
+await evaluate(`document.querySelector('#institutions .chapter-stats').scrollIntoView()`);
 await new Promise(r=>setTimeout(r,100));
 await cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
 await new Promise(r=>setTimeout(r,100));
@@ -73,10 +75,9 @@ assert(paragraphAnimation&&paragraphsVisible,'Disclosure paragraph entrance');
 const revised=await evaluate(`({breadcrumb:document.querySelector('.breadcrumbs').innerText,projectLabel:!!document.querySelector('.project-label'),advocacyLogo:!!document.querySelector('.advocacy-symbol'),share:!!document.querySelector('.share-button'),footerX:!!document.querySelector('.site-footer a[href*="twitter"]'),fullLogo:document.querySelector('.menu-toggle img').getAttribute('src'),logoWidth:document.querySelector('.menu-toggle img').getBoundingClientRect().width,partnerHref:document.querySelector('.project-partner a').getAttribute('href'),partnerText:document.querySelector('.project-partner').innerText,features:document.querySelectorAll('.portal-feature').length,disclosures:[...document.querySelectorAll('.story-details>summary>span:first-child')].map(e=>e.textContent),photoRatio:document.querySelector('.photo-moment>img').getBoundingClientRect().height/document.querySelector('.photo-moment>img').getBoundingClientRect().width,naturalPhotoRatio:document.querySelector('.photo-moment>img').naturalHeight/document.querySelector('.photo-moment>img').naturalWidth})`);
 assert(!revised.projectLabel&&!revised.advocacyLogo&&!revised.share&&!revised.footerX&&revised.fullLogo.includes('logo-full')&&revised.logoWidth>200&&revised.partnerHref==='https://sss-ua.org/projects/?partner=unhcr-3'&&!revised.partnerText.includes('УВКБ')&&revised.features===4&&revised.disclosures.every(t=>t==='Докладніше')&&Math.abs(revised.photoRatio-revised.naturalPhotoRatio)<.01,'Requested content, full logo and uncropped image');
 report.push({revised});
-const visibleEvents=await evaluate(`({groups:document.querySelectorAll('.chapter-events').length,links:document.querySelectorAll('.chapter-events a').length,lists:[...document.querySelectorAll('.chapter-events .event-list')].map(e=>e.children.length),outsideDetails:[...document.querySelectorAll('.chapter-events')].every(e=>!e.closest('details')),text:[...document.querySelectorAll('.chapter-events')].map(e=>e.innerText).join(' ')})`);
-assert(visibleEvents.groups===3&&visibleEvents.links===9&&visibleEvents.lists.join(',')==='5,4,2'&&visibleEvents.outsideDetails,'All event groups visible outside disclosures');
-for(const name of ['Тернополі','Житомирі','Чернівецькій області','Бучі','Кропивницькому','Дніпрі','Луцьку','Білій Церкві','Миколаївської','Херсонської','Практичні механізми','15–16 липня 2026'])assert(visibleEvents.text.includes(name),'Missing source event: '+name);
-report.push({visibleEvents:{...visibleEvents,text:undefined}});
+const informationHierarchy=await evaluate(`({visibleEventBlocks:document.querySelectorAll('.chapter-events').length,aboutDetails:!!document.querySelector('#about .about-details'),prioritiesHidden:!!document.querySelector('.priorities').closest('details'),forumListsHidden:[...document.querySelectorAll('#institutions .source-list,#councils .source-list')].every(e=>!!e.closest('details')),aboutWidth:document.querySelector('.about-lead').getBoundingClientRect().width,aboutFont:parseFloat(getComputedStyle(document.querySelector('.about-lead')).fontSize),badgeHeight:document.querySelector('.menu-toggle').getBoundingClientRect().height,logoHeight:document.querySelector('.menu-toggle img').getBoundingClientRect().height,detailCount:document.querySelectorAll('details').length})`);
+assert(informationHierarchy.visibleEventBlocks===0&&informationHierarchy.prioritiesHidden&&informationHierarchy.forumListsHidden&&informationHierarchy.aboutFont>=22&&informationHierarchy.badgeHeight===52&&informationHierarchy.logoHeight===26&&informationHierarchy.detailCount===8,'Progressive disclosure, readable overview and reference badge sizing');
+report.push({informationHierarchy});
 const reducedMotion=await evaluate(`matchMedia('(prefers-reduced-motion: reduce)').matches&&getComputedStyle(document.querySelector('[data-enter]')).animationName==='none'`);
 const brokenImages=await evaluate(`Promise.all([...document.images].map(i=>{i.loading='eager';return i.decode().catch(()=>null)})).then(()=>[...document.images].filter(i=>i.naturalWidth===0).map(i=>i.src))`);
 report.push({menuOpened,menuClosed,anchor,disclosure,reducedMotion,brokenImages});
@@ -88,7 +89,7 @@ await evaluate(`document.querySelector('.menu-close').click()`);
 await new Promise(r=>setTimeout(r,100));
 await evaluate(`document.querySelector('#ombudsman').scrollIntoView()`);
 const kpiShot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync('qa/kpi-readability.png',Buffer.from(kpiShot.data,'base64'));
-for(const [name,selector] of [['events','#institutions .chapter-events'],['portal','.portal-band'],['footer','.site-footer'],['photo','.photo-moment'],['disclosure','#councils .story-details']]){
+for(const [name,selector] of [['about','#about'],['portal','.portal-band'],['footer','.site-footer'],['photo','.photo-moment'],['disclosure','#councils .story-details']]){
 await evaluate(`document.querySelector('${selector}').scrollIntoView()`);
 const capture=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync(`qa/${name}.png`,Buffer.from(capture.data,'base64'));
 }
@@ -99,7 +100,7 @@ writeFileSync('qa/full-page.png',Buffer.from(shot.data,'base64'));
 await cdp('Emulation.setScriptExecutionDisabled',{value:true});
 await cdp('Page.reload');
 await new Promise(r=>setTimeout(r,500));
-const noJs=await evaluate(`getComputedStyle(document.querySelector('#about h2')).opacity==='1'&&document.querySelectorAll('details').length===5`);
+const noJs=await evaluate(`getComputedStyle(document.querySelector('#about h2')).opacity==='1'&&document.querySelectorAll('details').length===8`);
 report.push({noJs});
 writeFileSync('qa/browser-report.json',JSON.stringify(report,null,2));
 console.log(JSON.stringify(report.map(item=>item.width?{width:item.width,scrollWidth:item.scrollWidth,overflows:item.overflows,broken:item.images.filter(i=>!i.ok)}:item),null,2));

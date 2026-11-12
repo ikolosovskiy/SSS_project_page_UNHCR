@@ -12,6 +12,6 @@ assert.equal((html.match(/class="resource-link"/g)||[]).length, 8, 'Eight source
 for (const stat of ['2 376','1 159','1 125','782','877','126','27','173','167']) assert(html.includes(stat), `Missing source result: ${stat}`);
 assert(!/lorem ipsum|\[object Object\]|undefined|href="#"/i.test(html), 'No placeholders');
 assert(readFileSync('style.css','utf8').includes('prefers-reduced-motion:reduce'), 'Reduced motion');
-assert.equal((html.match(/<details\b/g)||[]).length, 5, 'Five disclosures');
+assert.equal((html.match(/<details\b/g)||[]).length, 8, 'Eight disclosures');
 assert.equal(html.split('<!-- SSS_PROJECT_START -->')[1].split('<!-- SSS_PROJECT_END -->')[0].trim(), readFileSync('page-content.html','utf8'), 'WP / preview parity');
 console.log('PASS: assets, IDs, anchors, source results, resources, disclosures, reduced motion, WordPress markup parity.');
