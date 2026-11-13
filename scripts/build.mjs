@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import { geographyMarkup } from './geography.mjs';
 process.chdir(fileURLToPath(new URL('..', import.meta.url)));
 const source = readFileSync('research/content.md', 'utf8');
@@ -39,6 +40,8 @@ priorityItems[4]=priorityItems[4].replace('фахівців','фахівчинь
 const priorityMarkup=priorityItems.map((text,i)=>{const tag=i===4?'div':'a';return `<${tag} class="priority-item" ${i===4?'':`href="#${priorityTargets[i]}"`} data-priority><span class="priority-bullet" aria-hidden="true">•</span><b>${escape(text.charAt(0).toLocaleUpperCase('uk')+text.slice(1))}</b>${i===4?'':arrow}</${tag}>`}).join('');
 let html=readFileSync('page.template.html','utf8').replace('<!-- CHAPTERS -->',chapterMarkup).replace('<!-- PRIORITIES -->',priorityMarkup).replace('<!-- GEOGRAPHY_MAP -->',geographyMarkup(regionNames)).replace('<!-- ADVOCACY -->',article(4)).replace('<!-- RESOURCES -->',resources.map((r,i)=>`<a class="resource-link" href="${escape(r.url)}" target="_blank" rel="noopener noreferrer"><span class="resource-no">${i+1}</span><span>${escape(r.title)}</span>${arrow}</a>`).join(''));
 html=html.replace('<!-- NEWS -->',newsMarkup).replace(/[ \t]+$/gm,'');
+const fingerprint = file => createHash('sha256').update(readFileSync(file)).digest('hex').slice(0,12);
+html=html.replace('href="style.css"',`href="style.css?v=${fingerprint('style.css')}"`).replace('src="main.js"',`src="main.js?v=${fingerprint('main.js')}"`);
 writeFileSync('index.html',html);
 writeFileSync('page-content.html',html.split('<!-- SSS_PROJECT_START -->')[1].split('<!-- SSS_PROJECT_END -->')[0].trim());
 console.log(`Built index.html and page-content.html. ${resources.length} resources, ${chapters.length} chapters, 23 regions.`);

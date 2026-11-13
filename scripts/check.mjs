@@ -7,7 +7,7 @@ const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]);
 assert.equal(new Set(ids).size, ids.length, 'Unique IDs');
 assert.equal((html.match(/<h1\b/g)||[]).length, 1, 'One H1');
 for (const [,href] of html.matchAll(/href="#([^"]*)"/g)) assert(ids.includes(href), `Missing anchor: ${href}`);
-for (const [,asset] of html.matchAll(/(?:src|href)="((?:assets\/|style\.css|main\.js)[^"]*)"/g)) assert(existsSync(asset), `Missing asset: ${asset}`);
+for (const [,asset] of html.matchAll(/(?:src|href)="((?:assets\/|style\.css|main\.js)[^"]*)"/g)) assert(existsSync(asset.split('?')[0]), `Missing asset: ${asset}`);
 assert.equal((html.match(/class="resource-link"/g)||[]).length, 8, 'Eight source resources');
 for (const stat of ['2 376','1 159','1 125','782','877','126','27','173','167']) assert(html.includes(stat), `Missing source result: ${stat}`);
 assert(!/lorem ipsum|\[object Object\]|undefined|href="#"/i.test(html), 'No placeholders');
