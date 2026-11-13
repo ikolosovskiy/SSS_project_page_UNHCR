@@ -12,9 +12,9 @@ assert.equal((html.match(/class="resource-link"/g)||[]).length, 8, 'Eight source
 for (const stat of ['2 376','1 159','1 125','782','877','126','27','173','167']) assert(html.includes(stat), `Missing source result: ${stat}`);
 assert(!/lorem ipsum|\[object Object\]|undefined|href="#"/i.test(html), 'No placeholders');
 assert(readFileSync('style.css','utf8').includes('prefers-reduced-motion:reduce'), 'Reduced motion');
-assert.equal((html.match(/<details\b/g)||[]).length, 8, 'Eight disclosures');
+assert.equal((html.match(/<details\b/g)||[]).length, 9, 'Nine disclosures');
 assert.equal(html.split('<!-- SSS_PROJECT_START -->')[1].split('<!-- SSS_PROJECT_END -->')[0].trim(), readFileSync('page-content.html','utf8'), 'WP / preview parity');
-console.log('PASS: assets, IDs, anchors, source results, resources, eight disclosures, reduced motion, WordPress markup parity.');
+console.log('PASS: assets, IDs, anchors, source results, resources, nine disclosures, reduced motion, WordPress markup parity.');
 
 const news=JSON.parse(readFileSync('research/project-news.json','utf8'));
 assert.equal((html.match(/class="news-card"/g)||[]).length,6,'Six source news stories');
@@ -31,7 +31,7 @@ assert.equal(mapData.regions.filter(r=>r.kind==='oblast').length,24,'All oblast 
 assert.equal((html.match(/data-covered="true"/g)||[]).length,23,'Exactly 23 highlighted oblasts');
 assert(html.includes('data-region-name="Луганська область"')&&html.includes('data-region-name="АР Крим"')&&html.includes('м. Київ'),'All regions and separate capital marker');
 assert(!html.includes('about-support')&&!html.includes('about-context'),'Removed screenshot block');
-const priorities=[...html.matchAll(/data-priority><span>\d<\/span><b>([^<]+)/g)].map(m=>m[1]);
+const priorities=[...html.matchAll(/class="priority-item"[^>]*data-priority>[\s\S]*?<b>([^<]+)/g)].map(m=>m[1]);
 assert.equal(priorities.length,5);
 assert(priorities.every(t=>t[0]===t[0].toLocaleUpperCase('uk')),'Priority first letters are uppercase');
 
@@ -43,3 +43,18 @@ assert.equal(mapData.regions.find(r=>r.name==='АР Крим').paths.length,1,'S
 assert.equal(mapData.regions.find(r=>r.name==='АР Крим').paths[0].length,1,'No Sevastopol hole or boundary');
 assert.equal(mapData.license,'Public domain','Alternative data source');
 assert(!/map-legend|map-help|map-credit|<figcaption>/.test(html.match(/<figure class="project-map">[\s\S]*?<\/figure>/)[0]),'No map captions or legend');
+
+assert(!html.includes('photo-moment'),'Removed standalone forum photo');
+assert(!html.includes('portal-card'),'Unified portal statistics');
+assert(html.includes('assets/documents/roadmap-shyrokivska.pdf'),'Correct road map PDF');
+assert(html.includes('Від ініціатив до змін')&&html.includes('постраждалих від війни'),'PDF wording');
+assert.equal((html.match(/class="chapter-number"/g)||[]).length,7,'Seven numbered direction headings');
+assert(html.includes('href="https://www.unhcr.org/ua"'),'Direct donor website');
+
+assert.equal((html.match(/class="priority-bullet"/g)||[]).length,5,'Bulleted priorities');
+assert(/<div class="priority-item"[^>]*data-priority>[\s\S]*?Фахів/i.test(html)||html.includes('Підтримка фахівчинь і фахівців'),'Inclusive final priority');
+const resultBlock=html.match(/<div class="results-grid"[\s\S]*?<div class="results-bottom">/)[0];
+assert(resultBlock.includes('<b>10</b>')&&resultBlock.includes('громад підтримали в розробці соціальних паспортів'),'Added source-backed result metrics');
+assert(!html.match(/<section class="chapter section[^>]*id="councils"[\s\S]*?<\/section>/)[0].includes('portal-results'),'Portal metrics are not duplicated in councils chapter');
+assert.equal((html.match(/class="project-photo"/g)||[]).length,11,'Captioned chapter and comparison photographs');
+assert(!html.includes('assets/images/sssp-uvkb-2026-13-1024x735.jpg'),'Unrelated roadmap image removed');
