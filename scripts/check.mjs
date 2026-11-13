@@ -48,7 +48,7 @@ assert(!html.includes('photo-moment'),'Removed standalone forum photo');
 assert(!html.includes('portal-card'),'Unified portal statistics');
 assert(html.includes('assets/documents/roadmap-shyrokivska.pdf'),'Correct road map PDF');
 assert(html.includes('Від ініціатив до змін')&&html.includes('постраждалих від війни'),'PDF wording');
-assert.equal((html.match(/class="chapter-number"/g)||[]).length,7,'Seven numbered direction headings');
+assert.equal((html.match(/class="chapter-number"/g)||[]).length,10,'Ten numbered sections');
 assert(html.includes('href="https://www.unhcr.org/ua"'),'Direct donor website');
 
 assert.equal((html.match(/class="priority-bullet"/g)||[]).length,5,'Bulleted priorities');
@@ -58,3 +58,8 @@ assert(resultBlock.includes('<b>10</b>')&&resultBlock.includes('громад п�
 assert(!html.match(/<section class="chapter section[^>]*id="councils"[\s\S]*?<\/section>/)[0].includes('portal-results'),'Portal metrics are not duplicated in councils chapter');
 assert.equal((html.match(/class="project-photo"/g)||[]).length,11,'Captioned chapter and comparison photographs');
 assert(!html.includes('assets/images/sssp-uvkb-2026-13-1024x735.jpg'),'Unrelated roadmap image removed');
+
+const sectionNumbers=[...html.matchAll(/class="chapter-number">(\d+)</g)].map(m=>Number(m[1]));
+assert.deepEqual(sectionNumbers,[1,2,3,4,5,6,7,8,9,10],'Section numbers match contents order');
+assert(html.includes('Портал рад ВПО — джерело повної'),'Updated portal heading');
+assert(html.includes('<p>6 інформаційних дайджестів для рад ВПО і громад. Охоплення — понад 850 рад ВПО.</p>'),'Digest explanation is regular text');

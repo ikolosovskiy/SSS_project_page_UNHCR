@@ -110,7 +110,6 @@ body:has(>.sss-project){margin:0}
 .sss-project .section-nav a{counter-increment:section-index;display:grid;grid-template-columns:28px 1fr 24px;align-items:center;gap:16px;padding:22px 0;border-bottom:1px solid var(--forest);font:700 22px/1.5 var(--font-heading)}
 .sss-project .section-nav a:before{content:counter(section-index);display:grid;place-items:center;width:28px;height:28px;font:400 14px/1 var(--font-body);border-radius:50%}
 .sss-project .section-nav a:after{content:'↗';font:400 24px/1 var(--font-body);transition:transform .25s var(--ease)}
-.sss-project .section-nav a[aria-current]:before{background:var(--yellow)}
 .sss-project .section-nav a:hover:after{transform:translate(3px,-3px)}
 .sss-project .section-nav a:hover{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:6px}
 @media(max-width:800px){.sss-project .section-nav{column-gap:32px}.sss-project .section-nav a{font-size:20px}}
@@ -323,7 +322,6 @@ body:has(>.sss-project){margin:0}
 .sss-project .priorities .priority-item>.priority-bullet{display:block;width:24px;height:auto;background:none;border:0;border-radius:0;font:500 28px/1.4 var(--font-body)}
 .sss-project .portal-stats{margin-top:48px}
 .sss-project .portal-grid .button{margin-top:32px}
-.sss-project .advocacy-content .source-list li:before{content:counter(advocacy) ')'}
 .sss-project .roadmap-example img{display:block;width:100%;height:auto;border-radius:8px}
 .sss-project .roadmap-example a{text-decoration:underline;text-underline-offset:4px}
 @media(max-width:800px){.sss-project .project-supporters{--supporter-logo-height:clamp(28px,10vw,44px);row-gap:28px;grid-template-columns:1fr;grid-template-rows:none}.sss-project .project-supporters>a{grid-row:auto;grid-template-rows:auto auto;row-gap:12px}.sss-project .project-supporters>a+a{padding-left:0;border-left:0}.sss-project .reach-card{grid-template-columns:90px 1fr 160px}.sss-project .before-after{gap:20px}.sss-project .chapter-photo{max-width:100%}}
@@ -333,3 +331,6 @@ body:has(>.sss-project){margin:0}
 
 .sss-project .project-supporters .eyebrow{align-self:start;font-size:14px;line-height:1.5}
 @media(min-width:801px) and (max-width:1100px){.sss-project .project-supporters{column-gap:24px}.sss-project .project-supporters>a+a{padding-left:24px}}
+
+.sss-project .advocacy-content li:last-child{border-bottom:0}
+.sss-project .news-heading .chapter-title-row{margin-bottom:0}

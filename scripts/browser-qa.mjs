@@ -11,6 +11,7 @@ socket.onmessage = ({data}) => { const message=JSON.parse(data);if(pending.has(m
 function cdp(method,params={}){return new Promise((resolve,reject)=>{const id=++serial;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}));});}
 async function evaluate(expression){const result=await cdp('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw Error(JSON.stringify(result.exceptionDetails));return result.result.value;}
 await cdp('Page.enable');
+await cdp('Emulation.setTouchEmulationEnabled',{enabled:false});
 await cdp('Emulation.setScriptExecutionDisabled',{value:false});
 await cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
 const report=[];
@@ -42,7 +43,9 @@ for(const width of [1440,1024,768,390,320]){
   assert(await evaluate(`document.querySelector('.map-tooltip').hidden`),'Tooltip hides when pointer leaves map');
   if(width===390){
     await cdp('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
-    await cdp('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[hoverPoint]});
+    await new Promise(r=>setTimeout(r,100));
+    const tapPoint=await evaluate(`(()=>{const r=document.querySelector('.map-region[data-region="Волинська"]').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`);
+    await cdp('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[tapPoint]});
     await cdp('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
     await new Promise(r=>setTimeout(r,120));
     assert(await evaluate(`!document.querySelector('.map-tooltip').hidden&&document.querySelector('.map-tooltip').textContent==='Волинська область'`),'Touch shows region name');
@@ -75,6 +78,7 @@ const indexExpanded=await evaluate(`document.querySelector('.page-contents').ope
 const indexFullHeight=await evaluate(`document.querySelector('.page-contents').getBoundingClientRect().height`);
 assert(indexLinkAnimation&&indexIntermediateHeight>indexCollapsedHeight&&indexIntermediateHeight<indexFullHeight,'Contents expands with staggered links');
 assert(await evaluate(`getComputedStyle(document.querySelector('.section-nav a[aria-current]')).backgroundColor==='rgba(0, 0, 0, 0)'`),'Current section has no filled card');
+assert(await evaluate(`getComputedStyle(document.querySelector('.section-nav a[aria-current]'),'::before').backgroundColor==='rgba(0, 0, 0, 0)'`),'Current contents number has no yellow fill');
 const indexShot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync('qa/mobile-section-index.png',Buffer.from(indexShot.data,'base64'));
 await evaluate(`document.querySelector('.section-nav a').click()`);
 assert(indexClosed&&indexExpanded&&await evaluate(`location.hash==='#about'&&!document.querySelector('.page-contents').open`),'Contents closes after navigation');
@@ -104,7 +108,7 @@ const accessibility=await evaluate(`({numberSize:parseFloat(getComputedStyle(doc
 report.push({counterStarted,counterFinished,counterReduced,accessibility});
 assert(accessibility.numberSize>=36&&accessibility.labelSize>=16&&accessibility.metaSize>=16,'Readable KPI digits, labels and metadata');
 assert(accessibility.advocacy==='rgb(251, 246, 236)'&&accessibility.roadmap==='rgb(251, 246, 236)','Official brand colors');
-assert(accessibility.fixedMenu==='fixed'&&accessibility.numbering.join(',')==='1,2,3,4,5,6,7'&&accessibility.priorityNumbers.every(t=>t==='•'),'Fixed menu and natural numbering');
+assert(accessibility.fixedMenu==='fixed'&&accessibility.numbering.join(',')==='1,2,3,4,5,6,7,8,9,10'&&accessibility.priorityNumbers.every(t=>t==='•'),'Fixed menu and natural numbering');
 await evaluate(`document.querySelector('.menu-toggle').click()`);
 const mobileMenuShot=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});writeFileSync('qa/mobile-menu.png',Buffer.from(mobileMenuShot.data,'base64'));
 const menuOpened=await evaluate(`document.querySelector('.project-menu').open&&document.querySelector('.menu-toggle').getAttribute('aria-expanded')==='true'`);
@@ -152,6 +156,7 @@ report.push({revised});
 const informationHierarchy=await evaluate(`({visibleEventBlocks:document.querySelectorAll('.chapter-events').length,aboutDetails:!!document.querySelector('#about .about-details'),prioritiesHidden:!!document.querySelector('.priorities').closest('details'),forumListsHidden:[...document.querySelectorAll('#institutions .source-list,#councils .source-list')].every(e=>!!e.closest('details')),aboutWidth:document.querySelector('.about-lead').getBoundingClientRect().width,aboutFont:parseFloat(getComputedStyle(document.querySelector('.about-lead')).fontSize),badgeHeight:document.querySelector('.menu-toggle').getBoundingClientRect().height,logoHeight:document.querySelector('.menu-toggle img').getBoundingClientRect().height,detailCount:document.querySelectorAll('details').length})`);
 assert(informationHierarchy.visibleEventBlocks===0&&!informationHierarchy.aboutDetails&&!informationHierarchy.prioritiesHidden&&informationHierarchy.forumListsHidden&&informationHierarchy.aboutFont>=22&&informationHierarchy.badgeHeight===52&&informationHierarchy.logoHeight===26&&informationHierarchy.detailCount===9,'Progressive disclosure, readable overview and reference badge sizing');
 report.push({informationHierarchy});
+assert(await evaluate(`!document.querySelector('#portal .prose>p:last-child strong')&&getComputedStyle(document.querySelector('.advocacy-content li:last-child')).borderBottomWidth==='0px'&&getComputedStyle(document.querySelector('.advocacy-content li'),'::before').content==='counter(advocacy)'`),'PDF typography and advocacy divider corrections');
 await evaluate(`document.querySelector('#geography').open=true;document.querySelector('[data-map-zoom="in"]').click()`);
 assert(await evaluate(`document.querySelector('[data-map-zoom="reset"]').textContent==='150%'&&document.querySelector('.map-viewport').classList.contains('is-zoomed')`),'Map zoom control');
 await evaluate(`document.querySelector('.map-viewport').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))`);
